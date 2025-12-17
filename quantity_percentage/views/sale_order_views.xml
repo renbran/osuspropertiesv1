@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Inherit sale order form view to add percentage field -->
+        <record id="view_order_form_inherit_percentage" model="ir.ui.view">
+            <field name="name">sale.order.form.inherit.percentage</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Add percentage field to order line tree within the form -->
+                <xpath expr="//field[@name='order_line']/tree//field[@name='product_uom_qty']" position="after">
+                    <field name="product_uom_qty_percentage" string="Qty (Smart %)" help="Smart percentage: Shows % for percentage UoM, regular qty for other UoMs" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Note: In Odoo 17, sale order lines don't have separate form views -->
+        <!-- The percentage field is already added to the inline tree view above -->
+
+    </data>
+</odoo>

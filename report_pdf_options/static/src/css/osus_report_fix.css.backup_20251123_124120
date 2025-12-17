@@ -1,0 +1,216 @@
+/* OSUS Properties - Global PDF Report Styling - CORRECTED HEADER PADDING */
+
+/* BASE DOCUMENT STYLES */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.6 !important;
+    color: #333333 !important;
+    background-color: #ffffff !important;
+}
+
+.page {
+    page-break-after: always;
+    overflow: hidden !important;
+    background-color: #ffffff !important;
+    padding-top: 60pt !important;
+}
+
+/* TYPOGRAPHY */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600 !important;
+    margin-top: 15pt !important;
+    margin-bottom: 10pt !important;
+    color: #2c3e50 !important;
+    page-break-after: avoid !important;
+}
+
+h1 { font-size: 18pt !important; }
+h2 { font-size: 15pt !important; }
+h3 { font-size: 13pt !important; }
+
+/* MASSIVELY INCREASED HEADER PADDING TO PREVENT OVERLAP */
+.header, .o_report_layout_standard .header,
+.o_report_layout_boxed .header,
+.o_report_layout_clean .header,
+.o_report_layout_background .header {
+    border-bottom: 1pt solid #dee2e6 !important;
+    margin-bottom: 50pt !important;
+    padding: 30pt 0 !important;
+    padding-top: 40pt !important;
+    padding-bottom: 40pt !important;
+    background-color: #f8f9fa !important;
+    min-height: 150pt !important;
+}
+
+/* Extra spacing for company details in header */
+.header .company_details,
+.header .address,
+.header div {
+    padding-top: 15pt !important;
+    padding-bottom: 15pt !important;
+    margin-top: 10pt !important;
+    margin-bottom: 10pt !important;
+}
+
+/* Logo spacing - more space below logo */
+.header img, .company-logo {
+    margin-bottom: 25pt !important;
+    max-height: 80pt !important;
+}
+
+/* MASSIVE clearance between header and content */
+.article {
+    padding-top: 40pt !important;
+    margin-top: 40pt !important;
+}
+
+/* FOOTER WITH BACKGROUND */
+.footer, .o_report_layout_standard .footer,
+.o_report_layout_boxed .footer,
+.o_report_layout_clean .footer,
+.o_report_layout_background .footer {
+    border-top: 1pt solid #dee2e6 !important;
+    margin-top: 30pt !important;
+    padding: 20pt 0 !important;
+    padding-top: 25pt !important;
+    font-size: 8.5pt !important;
+    background-color: #f8f9fa !important;
+}
+
+/* TABLE STYLING WITH BACKGROUND */
+table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 15pt 0 !important;
+    page-break-inside: auto !important;
+    font-size: 9.5pt !important;
+    background-color: #ffffff !important;
+}
+
+thead {
+    display: table-header-group !important;
+    background-color: #e9ecef !important;
+}
+
+tr {
+    page-break-inside: avoid !important;
+}
+
+th {
+    background-color: #e9ecef !important;
+    color: #2c3e50 !important;
+    font-weight: 600 !important;
+    padding: 10pt 8pt !important;
+    border-bottom: 2pt solid #dee2e6 !important;
+}
+
+td {
+    padding: 8pt !important;
+    border-bottom: 0.5pt solid #e9ecef !important;
+    word-wrap: break-word !important;
+    background-color: #ffffff !important;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f8f9fa !important;
+}
+
+tfoot td {
+    font-weight: 600 !important;
+    background-color: #e9ecef !important;
+    border-top: 2pt solid #dee2e6 !important;
+    padding: 10pt 8pt !important;
+}
+
+/* PREVENT HEADER/CONTENT OVERLAP - HUGE MARGINS */
+div[name="invoice_line_table"],
+div[name="stock_move_table"],
+div[name="order_line_table"],
+.invoice_table_wrapper {
+    margin-top: 50pt !important;
+    clear: both !important;
+}
+
+/* DOCUMENT DETAILS SECTION */
+.invoice-header, .document-header {
+    margin-top: 30pt !important;
+    margin-bottom: 25pt !important;
+    padding: 15pt !important;
+    background-color: #f8f9fa !important;
+}
+
+/* MONETARY VALUES */
+.monetary, .text-right, .amount {
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+/* TOTALS WITH BACKGROUND */
+.total-section {
+    margin-top: 25pt !important;
+    padding: 15pt !important;
+    border-top: 2pt solid #dee2e6 !important;
+    background-color: #f8f9fa !important;
+}
+
+/* IMAGES */
+img {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+}
+
+/* FIX CONTENT OVERFLOW */
+table.o_main_table, table.table {
+    table-layout: fixed !important;
+}
+
+td.text-wrap, th.text-wrap {
+    word-break: break-word !important;
+}
+
+/* PREVENT ORPHANS */
+p, td, th, li {
+    orphans: 3 !important;
+    widows: 3 !important;
+}
+
+/* BOOTSTRAP GRID FIXES */
+.row {
+    display: table !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    margin: 0 !important;
+}
+
+.col, [class*="col-"] {
+    display: table-cell !important;
+    float: none !important;
+    padding: 0 10pt !important;
+}
+
+/* PRINT OPTIMIZATION */
+@media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    body {
+        margin: 0 !important;
+    }
+    
+    .page {
+        padding-top: 60pt !important;
+    }
+}
+
+/* ENSURE PROPER CLEARANCE AFTER HEADER */
+.header + * {
+    margin-top: 40pt !important;
+}

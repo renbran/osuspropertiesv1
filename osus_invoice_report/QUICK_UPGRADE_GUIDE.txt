@@ -1,0 +1,63 @@
+═══════════════════════════════════════════════════════════════════
+  QR CODE IMPLEMENTATION - QUICK UPGRADE GUIDE
+  Module: osus_invoice_report
+  Date: December 3, 2025
+═══════════════════════════════════════════════════════════════════
+
+FILES MODIFIED:
+───────────────
+1. models/smart_report_helper.py
+   - Fixed should_include_qr_code() method
+   
+2. report/smart_invoice_report.xml
+   - Added QR code display in header section
+
+BACKUP FILES CREATED:
+─────────────────────
+1. models/smart_report_helper.py.backup
+2. report/smart_invoice_report.xml.backup
+
+UPGRADE STEPS:
+──────────────
+Option 1 - Via Odoo UI (Recommended):
+  1. Log in to Odoo as Administrator
+  2. Apps → Remove "Apps" filter
+  3. Search "OSUS Invoice Report"
+  4. Click Upgrade button
+  5. Test by printing an invoice
+
+Option 2 - Via Command Line:
+  sudo systemctl restart odoo
+  # Then upgrade via UI
+
+VERIFICATION:
+─────────────
+✓ Go to Accounting → Invoices
+✓ Open any invoice
+✓ Check "Show QR Code in Report" is enabled
+✓ Print → OSUS Invoice (Smart Design)
+✓ Verify QR code appears in top-right corner
+
+MODULES INVOLVED:
+─────────────────
+• ingenuity_invoice_qr_code - Generates QR codes
+• osus_invoice_report - Displays QR codes in reports
+
+KEY FIELDS:
+───────────
+• qr_image (Binary) - The QR code image data
+• qr_in_report (Boolean) - Enable/disable QR display
+
+TROUBLESHOOTING:
+────────────────
+If QR code doesn't appear:
+  1. Check ingenuity_invoice_qr_code module is installed
+  2. Verify qr_in_report checkbox is enabled
+  3. Upgrade osus_invoice_report module
+  4. Clear browser cache and regenerate PDF
+
+FULL DOCUMENTATION:
+───────────────────
+See: QR_CODE_IMPLEMENTATION_SUMMARY.md (in this directory)
+
+═══════════════════════════════════════════════════════════════════

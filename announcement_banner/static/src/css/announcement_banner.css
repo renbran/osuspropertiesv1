@@ -1,0 +1,611 @@
+/* Announcement Banner Styles - OSUSAPPS Branding */
+/* Primary Colors: Navy #001f3f, Teal #17a2b8, Gold #FFD700 */
+/* Company: OSUSAPPS - Enterprise Odoo Solutions */
+
+.announcement-banner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 31, 63, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.announcement-banner-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.announcement-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 3px solid #800020;
+  background: linear-gradient(135deg, #800020 0%, #4b0014 100%);
+  color: #ffffff;
+}
+
+.announcement-banner-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 12px;
+}
+
+.announcement-banner-title h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.3px;
+}
+
+.announcement-banner-title i {
+  font-size: 26px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 31, 63, 0.2);
+}
+
+.announcement-banner-header .btn-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.announcement-banner-header .btn-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.announcement-banner-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  background: #ffffff;
+  min-height: 150px;
+}
+
+.announcement-content {
+  color: #1a1a1a !important;
+  line-height: 1.8;
+  font-size: 15px;
+  font-weight: 400 !important;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal !important;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+  display: block;
+  width: 100%;
+}
+
+.announcement-content * {
+  color: inherit !important;
+  font-family: inherit;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  max-width: 100%;
+}
+
+/* Ensure proper spacing for all block elements */
+.announcement-content > * {
+  margin-bottom: 12px !important;
+}
+
+.announcement-content > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.announcement-content > *:first-child {
+  margin-top: 0 !important;
+}
+
+.announcement-content h1,
+.announcement-content h2,
+.announcement-content h3,
+.announcement-content h4,
+.announcement-content h5,
+.announcement-content h6 {
+  margin-top: 16px !important;
+  margin-bottom: 12px !important;
+  color: #001f3f !important;
+  font-weight: 700 !important;
+}
+
+.announcement-content h1 {
+  font-size: 28px !important;
+}
+
+.announcement-content h2 {
+  font-size: 24px !important;
+}
+
+.announcement-content h3 {
+  font-size: 20px !important;
+}
+
+.announcement-content h4 {
+  font-size: 18px !important;
+}
+
+.announcement-content h5 {
+  font-size: 16px !important;
+}
+
+.announcement-content h6 {
+  font-size: 15px !important;
+}
+
+.announcement-content p {
+  margin-bottom: 12px !important;
+  color: #1a1a1a !important;
+}
+
+.announcement-content ul,
+.announcement-content ol {
+  margin-bottom: 12px !important;
+  padding-left: 24px !important;
+  color: #1a1a1a !important;
+}
+
+.announcement-content li {
+  margin-bottom: 8px !important;
+  color: #1a1a1a !important;
+  line-height: 1.8 !important;
+}
+
+.announcement-content blockquote {
+  margin: 16px 0 !important;
+  padding: 12px 16px !important;
+  border-left: 4px solid #17a2b8 !important;
+  background-color: #f0f8f9 !important;
+  color: #1a1a1a !important;
+}
+
+.announcement-content code {
+  background-color: #f5f5f5 !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+  color: #d63384 !important;
+  font-family: "Courier New", monospace !important;
+}
+
+.announcement-content pre {
+  background-color: #f5f5f5 !important;
+  padding: 12px !important;
+  border-radius: 4px !important;
+  overflow-x: auto !important;
+  color: #1a1a1a !important;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  max-width: 100% !important;
+}
+
+/* Image handling - Enhanced for proper display */
+.announcement-content img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  margin: 16px auto !important;
+  display: block !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  object-fit: contain !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+/* Handle inline images */
+.announcement-content p img {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 4px !important;
+}
+
+/* Center aligned images */
+.announcement-content .text-center img,
+.announcement-content center img {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Image captions */
+.announcement-content figure {
+  margin: 16px 0 !important;
+  text-align: center !important;
+}
+
+.announcement-content figure img {
+  margin-bottom: 8px !important;
+}
+
+.announcement-content figcaption {
+  font-size: 13px !important;
+  color: #6c757d !important;
+  font-style: italic !important;
+  margin-top: 8px !important;
+}
+
+.announcement-content table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 16px 0 !important;
+}
+
+.announcement-content table th,
+.announcement-content table td {
+  border: 1px solid #ddd !important;
+  padding: 8px !important;
+  text-align: left !important;
+  color: #1a1a1a !important;
+}
+
+.announcement-content table th {
+  background-color: #f0f8f9 !important;
+  font-weight: 700 !important;
+  color: #001f3f !important;
+}
+
+.announcement-content a {
+  color: #0052a3 !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+  transition: color 0.2s !important;
+}
+
+.announcement-content a:hover {
+  color: #001f3f !important;
+  text-decoration: underline !important;
+}
+
+.announcement-content strong,
+.announcement-content b {
+  color: #001f3f !important;
+  font-weight: 700 !important;
+}
+
+.announcement-content em,
+.announcement-content i {
+  color: #0a3d62 !important;
+  font-style: italic !important;
+}
+
+.announcement-content u {
+  text-decoration: underline !important;
+  color: #1a1a1a !important;
+}
+
+.announcement-content mark {
+  background-color: #fff3cd !important;
+  color: #1a1a1a !important;
+  padding: 2px 4px !important;
+}
+
+/* Ensure divs and sections display properly */
+.announcement-content div,
+.announcement-content section {
+  display: block !important;
+  width: 100% !important;
+}
+
+/* Handle text alignment classes */
+.announcement-content .text-left {
+  text-align: left !important;
+}
+
+.announcement-content .text-center {
+  text-align: center !important;
+}
+
+.announcement-content .text-right {
+  text-align: right !important;
+}
+
+.announcement-content .text-justify {
+  text-align: justify !important;
+}
+
+/* Handle background colors */
+.announcement-content [style*="background-color"],
+.announcement-content [style*="background"] {
+  padding: 12px !important;
+  border-radius: 4px !important;
+  margin: 8px 0 !important;
+}
+
+/* Handle borders */
+.announcement-content [style*="border"] {
+  padding: 8px !important;
+  margin: 8px 0 !important;
+}
+
+/* Video and iframe support */
+.announcement-content iframe,
+.announcement-content video {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  margin: 16px auto !important;
+  display: block !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+/* Embedded content responsive wrapper */
+.announcement-content .embed-responsive {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.announcement-content .embed-responsive::before {
+  display: block !important;
+  content: "" !important;
+}
+
+.announcement-content .embed-responsive-16by9::before {
+  padding-top: 56.25% !important;
+}
+
+.announcement-content .embed-responsive-4by3::before {
+  padding-top: 75% !important;
+}
+
+.announcement-content .embed-responsive iframe,
+.announcement-content .embed-responsive video,
+.announcement-content .embed-responsive embed,
+.announcement-content .embed-responsive object {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+}
+
+/* Handle Odoo HTML field specific classes */
+.announcement-content .o_image {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 16px auto !important;
+}
+
+.announcement-content .o_image_inline {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 4px !important;
+}
+
+/* Empty content protection */
+.announcement-content:empty::before {
+  content: "No content to display" !important;
+  color: #6c757d !important;
+  font-style: italic !important;
+}
+
+.announcement-banner-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #e0f2f1;
+  background-color: #f0f8f9;
+  position: relative;
+}
+
+.announcement-branding {
+  position: absolute;
+  bottom: 4px;
+  right: 24px;
+  font-size: 10px;
+  color: #6c757d;
+  font-weight: 500;
+  opacity: 0.7;
+  letter-spacing: 0.5px;
+}
+
+.announcement-branding a {
+  color: #17a2b8 !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+
+.announcement-branding a:hover {
+  color: #001f3f !important;
+  text-decoration: underline !important;
+}
+
+.announcement-navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.announcement-navigation button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.announcement-counter {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+  min-width: 60px;
+  text-align: center;
+}
+
+.announcement-banner-footer .btn-primary {
+  background: linear-gradient(135deg, #001f3f 0%, #17a2b8 100%);
+  border: none;
+  padding: 8px 24px;
+  font-weight: 500;
+  color: white;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.announcement-banner-footer .btn-primary:hover {
+  background: linear-gradient(135deg, #003d5b 0%, #0e7490 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .announcement-banner-modal {
+    max-width: 95%;
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .announcement-banner-header {
+    padding: 16px 20px;
+  }
+
+  .announcement-banner-title h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+
+  .announcement-banner-body {
+    padding: 20px;
+  }
+
+  .announcement-content {
+    font-size: 14px;
+  }
+
+  .announcement-content img {
+    margin: 12px auto !important;
+  }
+
+  .announcement-content h1 {
+    font-size: 24px !important;
+  }
+
+  .announcement-content h2 {
+    font-size: 20px !important;
+  }
+
+  .announcement-content h3 {
+    font-size: 18px !important;
+  }
+
+  .announcement-banner-footer {
+    padding: 12px 20px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .announcement-navigation {
+    order: 2;
+  }
+
+  .announcement-banner-footer .btn-primary {
+    order: 1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .announcement-banner-modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 0;
+  }
+
+  .announcement-banner-title h3 {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+
+  .announcement-content {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .announcement-content h1 {
+    font-size: 20px !important;
+  }
+
+  .announcement-content h2 {
+    font-size: 18px !important;
+  }
+
+  .announcement-content h3 {
+    font-size: 16px !important;
+  }
+
+  .announcement-content img {
+    margin: 10px auto !important;
+    border-radius: 4px !important;
+  }
+
+  .announcement-content table {
+    font-size: 12px !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .announcement-banner-overlay {
+    display: none !important;
+  }
+}

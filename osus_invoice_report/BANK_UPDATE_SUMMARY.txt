@@ -1,0 +1,117 @@
+═══════════════════════════════════════════════════════════════════
+  BANK ACCOUNT UPDATE SUMMARY
+  Module: osus_invoice_report
+  Date: December 3, 2025
+═══════════════════════════════════════════════════════════════════
+
+BANK DETAILS CHANGED FROM:
+──────────────────────────
+❌ OLD BANK (ADCB):
+   Bank Name: ABU DHABI COMMERCIAL BANK (ADCB)
+   Account Name: OSUS REAL ESTATE BROKERAGE LLC
+   Account Number: 14041417820001 - AED
+   IBAN: AE350030014041417820001
+
+TO:
+───
+✅ NEW BANK (NBF):
+   Bank Name: National Bank of Fujairah
+   Account Name: OSUS REAL ESTATE BROKERAGE LLC
+   Account Number: 012371961346
+   IBAN: AE870380000012371961346
+   Account Currency: AED
+   Branch: DUBAI
+   Swift Code: NBFUAEAFXXX
+
+FILES UPDATED:
+──────────────
+1. models/smart_report_helper.py
+   - Updated get_payment_instructions() method
+   - Added new fields: currency, branch, swift_code
+
+2. report/smart_invoice_report.xml
+   - Updated bank details in payment instructions section
+   - Added display for currency, branch, and swift code
+
+3. report/report_invoice.xml (Bill Report)
+   - Updated bank name, account number, and IBAN
+   - Added currency, branch, and swift code rows
+
+4. report/bill_report.xml
+   - Updated bank name, account number, and IBAN
+   - Added currency, branch, and swift code rows
+
+5. report/invoice_report.xml
+   - Checked (no bank details present)
+
+BACKUP FILES CREATED:
+─────────────────────
+• models/smart_report_helper.py.backup (from QR implementation)
+• report/smart_invoice_report.xml.backup (from QR implementation)
+• report/invoice_report.xml.backup2
+• report/bill_report.xml.backup
+
+UPGRADE INSTRUCTIONS:
+─────────────────────
+After this change, you MUST upgrade the module:
+
+1. Via Odoo UI:
+   • Go to Apps
+   • Remove "Apps" filter
+   • Search "OSUS Invoice Report"
+   • Click Upgrade
+
+2. Via Command Line:
+   sudo systemctl restart odoo
+   # Then upgrade via UI
+
+VERIFICATION:
+─────────────
+Print any invoice or bill and verify:
+✓ Bank name shows: National Bank of Fujairah
+✓ Account number shows: 012371961346
+✓ IBAN shows: AE870380000012371961346
+✓ New fields display:
+  - Account Currency: AED
+  - Branch: DUBAI
+  - Swift Code: NBFUAEAFXXX
+
+IMPACT:
+───────
+• All new invoices will show NBF bank details
+• All new bills will show NBF bank details
+• Existing PDFs will NOT change (already generated)
+• New PDF exports will show updated bank details
+
+IMPORTANT NOTES:
+────────────────
+⚠ This change affects ALL invoice and bill reports
+⚠ Make sure to inform accounting/finance team
+⚠ Update payment instructions on website/portal if needed
+⚠ Notify clients about new bank account for payments
+
+TECHNICAL DETAILS:
+──────────────────
+• Python dictionary updated in smart_report_helper.py
+• XML templates updated with hardcoded fallback values
+• Changes are inheritance-safe (won't break child modules)
+• Follows Odoo 17 coding guidelines
+
+ROLLBACK PROCEDURE:
+───────────────────
+If you need to revert to ADCB bank:
+
+1. Restore from backups:
+   cp models/smart_report_helper.py.backup models/smart_report_helper.py
+   cp report/smart_invoice_report.xml.backup report/smart_invoice_report.xml
+   cp report/bill_report.xml.backup report/bill_report.xml
+   cp report/invoice_report.xml.backup2 report/invoice_report.xml
+
+2. Restart Odoo and upgrade module
+
+RELATED CHANGES:
+────────────────
+• QR Code implementation (completed earlier today)
+• Both changes should be upgraded together
+
+═══════════════════════════════════════════════════════════════════

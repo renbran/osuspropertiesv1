@@ -1,0 +1,750 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Commission Payout Report Template -->
+    <template id="commission_payout_report_template_final">
+        <t t-name="enhanced_status.commission_report_document_final">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-set="o" t-value="o.with_context(lang=lang)"/>
+                    <t t-set="format_date" t-value="lambda d: d.strftime('%d/%m/%Y') if d else ''"/>
+                    <t t-set="format_number" t-value="lambda v: '{:,.2f}'.format(float(v)) if v else '0.00'"/>
+                    
+                    <div class="page" style="font-family: 'Arial', 'Helvetica', sans-serif; font-size: 13px; line-height: 1.4; color: #000; background-color: #ffffff; margin: 0; padding: 0;">
+                        
+                        <!-- Custom Header -->
+                        <div style="background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%); padding: 20px 40px; border-bottom: 3px solid #800020; margin-bottom: 20px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="width: 30%; vertical-align: middle;">
+                                        <img src="https://osusproperties.com/images/osus.png" alt="OSUS Properties" style="max-width: 120px; height: auto;"/>
+                                    </td>
+                                    <td style="width: 70%; vertical-align: top; text-align: right;">
+                                        <div style="color: #333; font-size: 12px; line-height: 1.5;">
+                                            <div style="font-weight: bold; font-size: 13px; margin-bottom: 3px;">OSUS REAL ESTATE BROKERAGE LLC</div>
+                                            <div>Single Business Tower 29th Floor</div>
+                                            <div>Business Bay Dubai</div>
+                                            <div>United Arab Emirates</div>
+                                            <div style="font-weight: bold; margin-top: 4px;">VAT: 100236589600003</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div style="padding: 0 40px;">
+                            
+                            <!-- Commission Report Header -->
+                            <div style="text-align: center; margin: 25px 0;">
+                                <h1 style="color: #800020; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 1px;">
+                                    COMMISSION REPORT
+                                </h1>
+                                <div style="color: #666; font-size: 12px; margin-top: 8px;">
+                                    Generated on <span t-esc="format_date(datetime.datetime.now())"/>
+                                </div>
+                            </div>
+
+                            <!-- Order Information Box -->
+                            <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; border: 3px solid #800020;">
+                                <tr style="background-color: #f8f9fa;">
+                                    <td style="width: 25%; color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Order Number</td>
+                                    <td style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.name"/></td>
+                                    <td style="width: 25%; color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Order Date</td>
+                                    <td style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;"><span t-esc="format_date(o.date_order)"/></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Customer</td>
+                                    <td colspan="3" style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.partner_id.name"/></td>
+                                </tr>
+                                <tr style="background-color: #f8f9fa;">
+                                    <td style="color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Order Status</td>
+                                    <td style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.state"/></td>
+                                    <td style="color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Salesperson</td>
+                                    <td style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.user_id.name"/></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #800020; font-weight: bold; padding: 10px 15px; border: 2px solid #800020; font-size: 13px;">Order Total</td>
+                                    <td colspan="3" style="color: #000; padding: 10px 15px; border: 2px solid #800020; font-size: 14px; font-weight: bold;">
+                                        <span t-esc="format_number(o.amount_total)"/> AED
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Commission Details -->
+                            <t t-set="has_external" t-value="(o.broker_amount and o.broker_amount > 0) or (o.referrer_amount and o.referrer_amount > 0) or (o.cashback_amount and o.cashback_amount > 0) or (o.other_external_amount and o.other_external_amount > 0)"/>
+                            <t t-set="has_internal" t-value="(o.agent1_amount and o.agent1_amount > 0) or (o.agent2_amount and o.agent2_amount > 0) or (o.manager_amount and o.manager_amount > 0) or (o.director_amount and o.director_amount > 0)"/>
+                            <t t-set="has_legacy" t-value="(o.salesperson_commission and o.salesperson_commission > 0) or (o.manager_commission and o.manager_commission > 0)"/>
+
+                            <t t-if="has_external or has_internal or has_legacy">
+                                
+                                <!-- Commission Table -->
+                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 3px solid #800020;">
+                                    <thead>
+                                        <tr style="background-color: #800020; color: white;">
+                                            <th style="padding: 12px 10px; border: 2px solid #800020; font-size: 13px; font-weight: bold; text-align: left;">PARTY TYPE</th>
+                                            <th style="padding: 12px 10px; border: 2px solid #800020; font-size: 13px; font-weight: bold; text-align: left;">PARTNER NAME</th>
+                                            <th style="padding: 12px 10px; border: 2px solid #800020; font-size: 13px; font-weight: bold; text-align: left;">CALCULATION BASIS</th>
+                                            <th style="padding: 12px 10px; border: 2px solid #800020; font-size: 13px; font-weight: bold; text-align: center;">RATE (%)</th>
+                                            <th style="padding: 12px 10px; border: 2px solid #800020; font-size: 13px; font-weight: bold; text-align: right;">AMOUNT (AED)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- EXTERNAL COMMISSIONS -->
+                                        <t t-if="has_external">
+                                            <tr style="background-color: #f1f3f5;">
+                                                <td colspan="5" style="padding: 10px; border: 2px solid #800020; font-weight: bold; color: #800020; font-size: 14px;">EXTERNAL COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.broker_partner_id and o.broker_amount and o.broker_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Broker</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.broker_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.broker_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.broker_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.broker_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.broker_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.broker_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.referrer_partner_id and o.referrer_amount and o.referrer_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Referrer</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.referrer_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.referrer_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.referrer_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.referrer_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.referrer_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.referrer_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.cashback_partner_id and o.cashback_amount and o.cashback_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Cashback</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.cashback_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.cashback_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.cashback_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.cashback_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.cashback_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.cashback_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.other_external_partner_id and o.other_external_amount and o.other_external_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Other External</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.other_external_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.other_external_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.other_external_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.other_external_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.other_external_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.other_external_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr style="background-color: #f8f9fa;">
+                                                <td colspan="4" style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-weight: bold; color: #800020;">External Commissions Subtotal:</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-weight: bold; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.total_external_commission_amount)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- INTERNAL COMMISSIONS -->
+                                        <t t-if="has_internal">
+                                            <tr style="background-color: #f1f3f5;">
+                                                <td colspan="5" style="padding: 10px; border: 2px solid #800020; font-weight: bold; color: #800020; font-size: 14px;">INTERNAL COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.agent1_partner_id and o.agent1_amount and o.agent1_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Agent 1</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.agent1_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.agent1_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.agent1_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.agent1_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.agent1_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.agent1_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.agent2_partner_id and o.agent2_amount and o.agent2_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Agent 2</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.agent2_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.agent2_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.agent2_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.agent2_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.agent2_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.agent2_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.manager_partner_id and o.manager_amount and o.manager_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Manager</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.manager_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.manager_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.manager_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.manager_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.manager_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.manager_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.director_partner_id and o.director_amount and o.director_amount > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Director</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.director_partner_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">
+                                                    <span t-if="o.director_calculation_base == 'unit_price'">Unit Price / Sales Value</span>
+                                                    <span t-elif="o.director_calculation_base == 'order_total_untaxed'">Order Total (Without Tax)</span>
+                                                    <span t-elif="o.director_calculation_base == 'order_total'">Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.director_rate)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.director_amount)"/></td>
+                                            </tr>
+                                            
+                                            <tr style="background-color: #f8f9fa;">
+                                                <td colspan="4" style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-weight: bold; color: #800020;">Internal Commissions Subtotal:</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-weight: bold; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.total_internal_commission_amount)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- LEGACY COMMISSIONS -->
+                                        <t t-if="has_legacy">
+                                            <tr style="background-color: #f1f3f5;">
+                                                <td colspan="5" style="padding: 10px; border: 2px solid #800020; font-weight: bold; color: #800020; font-size: 14px;">LEGACY COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.consultant_id and o.salesperson_commission and o.salesperson_commission > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Consultant</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.consultant_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Legacy Calculation</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.consultant_comm_percentage)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.salesperson_commission)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.manager_id and o.manager_commission and o.manager_commission > 0" style="background-color: white;">
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Manager (Legacy)</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;"><span t-field="o.manager_id.name"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px;">Legacy Calculation</td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: center;"><span t-esc="format_number(o.manager_comm_percentage)"/></td>
+                                                <td style="padding: 10px; border: 2px solid #800020; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;"><span t-esc="format_number(o.manager_commission)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- GRAND TOTAL -->
+                                        <tr style="background-color: #000000; color: white;">
+                                            <td colspan="4" style="padding: 12px 10px; border: 2px solid #ffffff; font-size: 14px; text-align: right; font-weight: bold;">TOTAL COMMISSION AMOUNT:</td>
+                                            <td style="padding: 12px 10px; border: 2px solid #ffffff; font-size: 14px; text-align: right; font-weight: bold;"><span t-esc="format_number(o.total_commission_amount)"/> AED</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- Commission Summary -->
+                                <table style="width: 50%; margin-left: auto; margin-bottom: 20px; border-collapse: collapse; border: 3px solid #800020;">
+                                    <tr style="background-color: #800020; color: white;">
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; font-weight: bold; text-align: left;">Order Total</td>
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; text-align: right; font-weight: bold;">
+                                            <span t-esc="format_number(o.amount_total)"/> AED
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #800020; color: white;">
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; font-weight: bold; text-align: left;">Total Commission</td>
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; text-align: right; font-weight: bold;">
+                                            <span t-esc="format_number(o.total_commission_amount)"/> AED
+                                        </td>
+                                    </tr>
+                                    <tr t-if="o.amount_tax and o.amount_tax > 0" style="background-color: #800020; color: white;">
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; font-weight: bold; text-align: left;">VAT (5%)</td>
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; text-align: right; font-weight: bold;">
+                                            <span t-esc="format_number(o.amount_tax)"/> AED
+                                        </td>
+                                    </tr>
+                                    <tr style="background-color: #000000; color: white;">
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 13px; font-weight: bold; text-align: left;">Net Commission Payable</td>
+                                        <td style="padding: 10px 15px; border: 2px solid #ffffff; font-size: 14px; text-align: right; font-weight: bold;">
+                                            <span t-esc="format_number(o.total_commission_amount)"/> AED
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Confidential Notice -->
+                                <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #800020;">
+                                    <p style="margin: 0; color: #800020; font-weight: bold; font-size: 13px;">CONFIDENTIAL DOCUMENT</p>
+                                    <p style="margin: 5px 0 0 0; color: #000; font-size: 12px;">This commission report is for internal use only and contains confidential financial information.</p>
+                                </div>
+                            </t>
+
+                            <!-- No Commission Message -->
+                            <t t-if="not has_external and not has_internal and not has_legacy">
+                                <div style="text-align: center; padding: 40px 20px; background-color: #f8f9fa; border: 2px solid #dee2e6; margin: 20px 0;">
+                                    <h3 style="color: #800020; margin: 0 0 10px 0;">No Commissions Configured</h3>
+                                    <p style="color: #666; margin: 0;">This order does not have any commission arrangements set up.</p>
+                                </div>
+                            </t>
+
+                        </div>
+
+                        <!-- Custom Footer -->
+                        <div style="background-color: #f5f5f5; border-top: 3px solid #800020; padding: 15px 40px; margin-top: 30px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="width: 33%; vertical-align: middle; font-size: 12px;">
+                                        <div style="margin-bottom: 3px;">
+                                            <strong style="color: #800020;">Phone:</strong> <span style="color: #000;">+971 4 336 4500</span>
+                                        </div>
+                                        <div>
+                                            <strong style="color: #800020;">Email:</strong> <span style="color: #000;">info@osusproperties.com</span>
+                                        </div>
+                                    </td>
+                                    <td style="width: 34%; text-align: center; vertical-align: middle; font-size: 12px;">
+                                        <div>
+                                            <a href="http://www.osusproperties.com" style="color: #800020; text-decoration: none; font-weight: bold;">www.osusproperties.com</a>
+                                        </div>
+                                    </td>
+                                    <td style="width: 33%; text-align: right; vertical-align: middle;">
+                                        <div style="color: #000; font-weight: bold; font-size: 11px;">
+                                            This is a computer generated document. No signature or stamp required.
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+                                /* Professional Report Styling */
+                                .commission-header {
+                                    text-align: center;
+                                    margin-bottom: 25px;
+                                    padding-bottom: 15px;
+                                    border-bottom: 2px solid #800020;
+                                }
+                                
+                                .commission-title {
+                                    font-size: 24px;
+                                    font-weight: 700;
+                                    color: #800020;
+                                    margin: 0 0 10px 0;
+                                    letter-spacing: 1px;
+                                }
+                                
+                                .commission-subtitle {
+                                    font-size: 12px;
+                                    color: #666;
+                                    margin: 5px 0;
+                                }
+                                
+                                /* Customer Info Box */
+                                .customer-info-box {
+                                    background: #f8f9fa;
+                                    padding: 15px;
+                                    margin-bottom: 20px;
+                                    border-left: 4px solid #800020;
+                                }
+                                
+                                .info-label {
+                                    font-weight: 600;
+                                    color: #800020;
+                                    display: inline-block;
+                                    min-width: 120px;
+                                }
+                                
+                                /* Commission Table */
+                                .commission-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin: 20px 0;
+                                    font-size: 11px;
+                                }
+                                
+                                .commission-table thead th {
+                                    background: #800020;
+                                    color: white;
+                                    font-weight: 600;
+                                    padding: 10px 8px;
+                                    text-align: left;
+                                    border: none;
+                                }
+                                
+                                .commission-table tbody td {
+                                    padding: 10px 8px;
+                                    border-bottom: 1px solid #dee2e6;
+                                }
+                                
+                                .commission-table tbody tr:hover {
+                                    background: #f8f9fa;
+                                }
+                                
+                                .section-header-row td {
+                                    background: #f1f3f5 !important;
+                                    font-weight: 700;
+                                    color: #800020;
+                                    padding: 12px 8px !important;
+                                    border-top: 2px solid #800020;
+                                    border-bottom: 2px solid #800020;
+                                }
+                                
+                                .text-end {
+                                    text-align: right;
+                                }
+                                
+                                .text-center {
+                                    text-align: center;
+                                }
+                                
+                                .amount-cell {
+                                    font-family: 'Courier New', monospace;
+                                    font-weight: 500;
+                                }
+                                
+                                /* Total Rows */
+                                .subtotal-row td {
+                                    background: #f8f9fa;
+                                    font-weight: 600;
+                                    border-top: 2px solid #dee2e6;
+                                    padding: 12px 8px !important;
+                                }
+                                
+                                .grand-total-row td {
+                                    background: #800020;
+                                    color: white;
+                                    font-weight: 700;
+                                    font-size: 13px;
+                                    padding: 14px 8px !important;
+                                    border: none;
+                                }
+                                
+                                /* Summary Box */
+                                .summary-box {
+                                    background: #fff;
+                                    border: 2px solid #800020;
+                                    padding: 20px;
+                                    margin-top: 30px;
+                                }
+                                
+                                .summary-row {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    padding: 8px 0;
+                                    border-bottom: 1px solid #dee2e6;
+                                }
+                                
+                                .summary-row:last-child {
+                                    border-bottom: none;
+                                    font-weight: 700;
+                                    font-size: 14px;
+                                    color: #800020;
+                                }
+                                
+                                /* No Commission Message */
+                                .no-commission-msg {
+                                    text-align: center;
+                                    padding: 40px 20px;
+                                    color: #6c757d;
+                                    font-style: italic;
+                                    background: #f8f9fa;
+                                    border-radius: 5px;
+                                }
+                            </style>
+
+                            <!-- Report Header -->
+                            <div class="commission-header">
+                                <h1 class="commission-title">COMMISSION REPORT</h1>
+                                <div class="commission-subtitle">
+                                    Generated on <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                </div>
+                            </div>
+
+                            <!-- Customer & Order Information -->
+                            <div class="customer-info-box">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Order Number:</span>
+                                            <span t-field="o.name"/>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Order Date:</span>
+                                            <span t-field="o.date_order" t-options="{'widget': 'date'}"/>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Customer:</span>
+                                            <span t-field="o.partner_id.name"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Order Status:</span>
+                                            <span t-field="o.state"/>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Salesperson:</span>
+                                            <span t-field="o.user_id.name"/>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-label">Order Total:</span>
+                                            <strong><span t-esc="'{:,.2f}'.format(o.amount_total or 0)"/> AED</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Commission Details Table -->
+                            <t t-set="has_external" t-value="(o.broker_amount and o.broker_amount > 0) or (o.referrer_amount and o.referrer_amount > 0) or (o.cashback_amount and o.cashback_amount > 0) or (o.other_external_amount and o.other_external_amount > 0)"/>
+                            <t t-set="has_internal" t-value="(o.agent1_amount and o.agent1_amount > 0) or (o.agent2_amount and o.agent2_amount > 0) or (o.manager_amount and o.manager_amount > 0) or (o.director_amount and o.director_amount > 0)"/>
+                            <t t-set="has_legacy" t-value="(o.salesperson_commission and o.salesperson_commission > 0) or (o.manager_commission and o.manager_commission > 0)"/>
+
+                            <t t-if="has_external or has_internal or has_legacy">
+                                <table class="commission-table table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 15%">Party Type</th>
+                                            <th style="width: 25%">Partner Name</th>
+                                            <th style="width: 25%">Calculation Basis</th>
+                                            <th style="width: 12%" class="text-center">Rate (%)</th>
+                                            <th style="width: 23%" class="text-end">Amount (AED)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- EXTERNAL COMMISSIONS -->
+                                        <t t-if="has_external">
+                                            <tr class="section-header-row">
+                                                <td colspan="5">EXTERNAL COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.broker_partner_id and o.broker_amount and o.broker_amount > 0">
+                                                <td>Broker</td>
+                                                <td><span t-field="o.broker_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.broker_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.broker_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.broker_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.broker_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.broker_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.referrer_partner_id and o.referrer_amount and o.referrer_amount > 0">
+                                                <td>Referrer</td>
+                                                <td><span t-field="o.referrer_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.referrer_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.referrer_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.referrer_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.referrer_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.referrer_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.cashback_partner_id and o.cashback_amount and o.cashback_amount > 0">
+                                                <td>Cashback</td>
+                                                <td><span t-field="o.cashback_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.cashback_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.cashback_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.cashback_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.cashback_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.cashback_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.other_external_partner_id and o.other_external_amount and o.other_external_amount > 0">
+                                                <td>Other External</td>
+                                                <td><span t-field="o.other_external_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.other_external_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.other_external_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.other_external_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.other_external_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.other_external_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr class="subtotal-row">
+                                                <td colspan="4" class="text-end">External Commissions Subtotal:</td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.total_external_commission_amount or 0)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- INTERNAL COMMISSIONS -->
+                                        <t t-if="has_internal">
+                                            <tr class="section-header-row">
+                                                <td colspan="5">INTERNAL COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.agent1_partner_id and o.agent1_amount and o.agent1_amount > 0">
+                                                <td>Agent 1</td>
+                                                <td><span t-field="o.agent1_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.agent1_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.agent1_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.agent1_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.agent1_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.agent1_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.agent2_partner_id and o.agent2_amount and o.agent2_amount > 0">
+                                                <td>Agent 2</td>
+                                                <td><span t-field="o.agent2_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.agent2_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.agent2_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.agent2_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.agent2_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.agent2_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.manager_partner_id and o.manager_amount and o.manager_amount > 0">
+                                                <td>Manager</td>
+                                                <td><span t-field="o.manager_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.manager_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.manager_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.manager_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.manager_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.manager_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.director_partner_id and o.director_amount and o.director_amount > 0">
+                                                <td>Director</td>
+                                                <td><span t-field="o.director_partner_id.name"/></td>
+                                                <td>
+                                                    <span t-if="o.director_calculation_base == 'unit_price'">Percentage of Unit Price</span>
+                                                    <span t-elif="o.director_calculation_base == 'order_total_untaxed'">Percentage of Order Total (Without Tax)</span>
+                                                    <span t-elif="o.director_calculation_base == 'order_total'">Percentage of Order Total (With Tax)</span>
+                                                    <span t-else="">Percentage</span>
+                                                </td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.director_rate or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.director_amount or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr class="subtotal-row">
+                                                <td colspan="4" class="text-end">Internal Commissions Subtotal:</td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.total_internal_commission_amount or 0)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- LEGACY COMMISSIONS -->
+                                        <t t-if="has_legacy">
+                                            <tr class="section-header-row">
+                                                <td colspan="5">LEGACY COMMISSIONS</td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.consultant_id and o.salesperson_commission and o.salesperson_commission > 0">
+                                                <td>Consultant</td>
+                                                <td><span t-field="o.consultant_id.name"/></td>
+                                                <td>Legacy Calculation</td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.consultant_comm_percentage or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.salesperson_commission or 0)"/></td>
+                                            </tr>
+                                            
+                                            <tr t-if="o.manager_id and o.manager_commission and o.manager_commission > 0">
+                                                <td>Manager (Legacy)</td>
+                                                <td><span t-field="o.manager_id.name"/></td>
+                                                <td>Legacy Calculation</td>
+                                                <td class="text-center"><span t-esc="'{:.2f}'.format(o.manager_comm_percentage or 0)"/></td>
+                                                <td class="text-end amount-cell"><span t-esc="'{:,.2f}'.format(o.manager_commission or 0)"/></td>
+                                            </tr>
+                                        </t>
+                                        
+                                        <!-- GRAND TOTAL -->
+                                        <tr class="grand-total-row">
+                                            <td colspan="4" class="text-end">TOTAL COMMISSION AMOUNT:</td>
+                                            <td class="text-end"><span t-esc="'{:,.2f}'.format(o.total_commission_amount or 0)"/></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- Summary Box -->
+                                <div class="summary-box">
+                                    <h4 style="color: #800020; margin-bottom: 15px; border-bottom: 2px solid #800020; padding-bottom: 10px;">Commission Summary</h4>
+                                    <div class="summary-row">
+                                        <span>Order Total:</span>
+                                        <span class="amount-cell"><span t-esc="'{:,.2f}'.format(o.amount_total or 0)"/> AED</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Total Commission:</span>
+                                        <span class="amount-cell"><span t-esc="'{:,.2f}'.format(o.total_commission_amount or 0)"/> AED</span>
+                                    </div>
+                                    <div class="summary-row" t-if="o.amount_tax and o.amount_tax > 0">
+                                        <span>VAT (5%):</span>
+                                        <span class="amount-cell"><span t-esc="'{:,.2f}'.format(o.amount_tax or 0)"/> AED</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Net Commission Payable:</span>
+                                        <span class="amount-cell"><span t-esc="'{:,.2f}'.format(o.total_commission_amount or 0)"/> AED</span>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- No Commission Message -->
+                            <t t-if="not has_external and not has_internal and not has_legacy">
+                                <div class="no-commission-msg">
+                                    <h4>No Commissions Configured</h4>
+                                    <p>This order does not have any commission arrangements set up.</p>
+                                </div>
+                            </t>
+
+                            <!-- Footer Note -->
+                            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 10px; color: #6c757d; text-align: center;">
+                                <p><strong>CONFIDENTIAL DOCUMENT</strong></p>
+                                <p>This commission report is for internal use only and contains confidential financial information.</p>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </t>
+    </template>
+
+<!-- Paper Format for Commission Report -->
+<record id="paperformat_commission_report" model="report.paperformat">
+    <field name="name">Commission Report A4</field>
+    <field name="default" eval="False"/>
+    <field name="format">A4</field>
+    <field name="page_height">0</field>
+    <field name="page_width">0</field>
+    <field name="orientation">Portrait</field>
+    <field name="margin_top">60</field>
+    <field name="margin_bottom">28</field>
+    <field name="margin_left">7</field>
+    <field name="margin_right">7</field>
+    <field name="header_line" eval="False"/>
+    <field name="header_spacing">50</field>
+    <field name="dpi">90</field>
+</record>
+
+<!-- Commission Report Action -->
+<record id="commission_payout_report" model="ir.actions.report">
+    <field name="name">Commission Payout Report</field>
+    <field name="model">sale.order</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">enhanced_status.commission_payout_report_template_final</field>
+    <field name="report_file">enhanced_status.commission_payout_report_template_final</field>
+    <field name="print_report_name">'Commission Report - %s' % (object.name)</field>
+    <field name="binding_model_id" ref="sale.model_sale_order"/>
+    <field name="binding_type">report</field>
+    <field name="paperformat_id" ref="paperformat_commission_report"/>
+</record>
+</odoo>

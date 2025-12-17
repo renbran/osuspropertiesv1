@@ -1,0 +1,135 @@
+/* save_button_text module
+   Enhanced styling for transformed Save / Discard buttons.
+   Keeps bootstrap semantics while polishing look & feel.
+*/
+button.o_form_button_save.sbt-labeled,
+button.o_form_button_save.oe_highlight {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  font-weight: 600;
+  padding: .45rem 1.25rem;
+  border-radius: .55rem;
+  line-height: 1.2;
+  letter-spacing: .3px;
+  position: relative;
+  background: linear-gradient(135deg, var(--o-brand-primary, #004c97) 0%, var(--o-brand-odoo, #714B67) 100%);
+  border: 1px solid rgba(255,255,255,.15);
+  box-shadow: 0 2px 4px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+  transition: background .25s ease, box-shadow .18s ease, transform .08s ease;
+  text-transform: none;
+}
+button.o_form_button_save.sbt-labeled:hover,
+button.o_form_button_save.oe_highlight:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.12);
+  transform: translateY(-1px);
+}
+button.o_form_button_save.sbt-labeled:active,
+button.o_form_button_save.oe_highlight:active {
+  transform: translateY(0) scale(.985);
+  box-shadow: 0 2px 5px rgba(0,0,0,.18);
+}
+button.o_form_button_save.sbt-labeled:focus-visible,
+button.o_form_button_save.oe_highlight:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.8), 0 0 0 6px rgba(102,41,204,.45);
+}
+
+/* Discard (cancel) button refined */
+button.o_form_button_cancel.sbt-cancel-labeled,
+button.o_form_button_cancel.btn-outline-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  font-weight: 500;
+  padding: .45rem 1.05rem;
+  border-radius: .55rem;
+  line-height: 1.2;
+  letter-spacing: .2px;
+  position: relative;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f3 100%);
+  border: 1px solid #d0d3d9;
+  color: #444 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  transition: background .25s ease, box-shadow .18s ease, transform .08s ease, color .25s ease;
+}
+button.o_form_button_cancel.sbt-cancel-labeled:hover,
+button.o_form_button_cancel.btn-outline-secondary:hover {
+  background: linear-gradient(135deg, #fefefe 0%, #ececf0 100%);
+  box-shadow: 0 3px 8px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.12);
+  transform: translateY(-1px);
+}
+button.o_form_button_cancel.sbt-cancel-labeled:active,
+button.o_form_button_cancel.btn-outline-secondary:active {
+  transform: translateY(0) scale(.985);
+  box-shadow: 0 2px 5px rgba(0,0,0,.16);
+}
+button.o_form_button_cancel.sbt-cancel-labeled:focus-visible,
+button.o_form_button_cancel.btn-outline-secondary:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 0 6px rgba(0,0,0,.25);
+}
+
+/* Disabled states */
+button.o_form_button_save:disabled,
+button.o_form_button_cancel:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Small size harmonization when buttons appear together */
+.o_form_buttons_edit button.o_form_button_save,
+.o_form_buttons_edit button.o_form_button_cancel {
+  margin-right: .4rem;
+}
+
+/* Provide fallbacks if brand vars unavailable */
+:root {
+  --o-brand-primary: #875A7B;
+  --o-brand-odoo: #714B67;
+}
+
+/* Override: Apply simple reduced size style to Save button */
+button.o_form_button_save.sbt-labeled,
+button.o_form_button_save.oe_highlight {
+  background: var(--o-brand-primary, #875A7B) !important; /* simple solid background */
+  border: none !important;
+  color: #fff !important;
+  padding: 8px 18px !important; /* reduced size */
+  text-align: center !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  font-size: 14px !important;
+  margin: 2px 4px !important;
+  cursor: pointer !important;
+  box-shadow: none !important; /* flat style */
+  letter-spacing: normal !important;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: .4rem !important;
+}
+
+/* Keep hover simple (optional slight darken) */
+button.o_form_button_save.sbt-labeled:hover,
+button.o_form_button_save.oe_highlight:hover {
+  background: color-mix(in srgb, var(--o-brand-primary, #875A7B) 90%, #000) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+button.o_form_button_save.sbt-labeled:active,
+button.o_form_button_save.oe_highlight:active {
+  background: color-mix(in srgb, var(--o-brand-primary, #875A7B) 80%, #000) !important;
+  box-shadow: none !important;
+}
+
+button.o_form_button_save.sbt-labeled:focus-visible,
+button.o_form_button_save.oe_highlight:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}

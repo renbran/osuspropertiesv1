@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Enhanced External Layout for All Reports -->
+    <template id="external_layout_enhanced" inherit_id="web.external_layout_standard" priority="999">
+        
+        <!-- Add custom CSS class to body -->
+        <xpath expr="//div[hasclass('article')]" position="attributes">
+            <attribute name="class">article o_report_layout_standard o_osus_enhanced</attribute>
+        </xpath>
+        
+        <!-- Enhance header section with MASSIVELY INCREASED PADDING -->
+        <xpath expr="//div[hasclass('header')]" position="attributes">
+            <attribute name="style">margin-bottom: 50px; padding: 40px 0; min-height: 150px;</attribute>
+        </xpath>
+        
+        <!-- Enhance footer section -->
+        <xpath expr="//div[hasclass('footer')]" position="attributes">
+            <attribute name="style">margin-top: 20px; padding-top: 15px; font-size: 9pt;</attribute>
+        </xpath>
+    </template>
+
+    <!-- Fix Table Layouts Globally -->
+    <template id="report_table_fix" inherit_id="web.html_container" priority="999">
+        <xpath expr="//head" position="inside">
+            <style type="text/css">
+                /* Additional inline critical styles */
+                table { border-collapse: collapse !important; width: 100% !important; }
+                th, td { padding: 6pt !important; }
+                .page { overflow: hidden !important; background-color: #ffffff !important; }
+                body { font-size: 10pt !important; line-height: 1.6 !important; }
+            </style>
+        </xpath>
+    </template>
+
+    <!-- Enhanced minimal layout -->
+    <template id="external_layout_clean_enhanced" inherit_id="web.external_layout_clean" priority="999">
+        <xpath expr="//div[hasclass('header')]" position="attributes">
+            <attribute name="style">margin-bottom: 50px; padding: 40px 0; min-height: 150px;</attribute>
+        </xpath>
+    </template>
+
+    <!-- Enhanced background layout -->
+    <template id="external_layout_background_enhanced" inherit_id="web.external_layout_background" priority="999">
+        <xpath expr="//div[hasclass('header')]" position="attributes">
+            <attribute name="style">margin-bottom: 50px; padding: 40px 0; min-height: 150px; background-color: #f8f9fa;</attribute>
+        </xpath>
+    </template>
+
+    <!-- Enhanced boxed layout -->
+    <template id="external_layout_boxed_enhanced" inherit_id="web.external_layout_boxed" priority="999">
+        <xpath expr="//div[hasclass('header')]" position="attributes">
+            <attribute name="style">margin-bottom: 50px; padding: 40px 0; min-height: 150px;</attribute>
+        </xpath>
+    </template>
+
+</odoo>

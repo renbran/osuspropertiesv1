@@ -1,0 +1,784 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Payment Voucher Report Action with QR Code -->
+        <record id="action_report_payment_voucher_qr" model="ir.actions.report">
+            <field name="name">Payment/Receipt Voucher (with QR)</field>
+            <field name="model">account.payment</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ingenuity_invoice_qr_code.report_payment_voucher_qr</field>
+            <field name="report_file">ingenuity_invoice_qr_code.report_payment_voucher_qr</field>
+            <field name="binding_model_id" ref="account.model_account_payment"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">(object.payment_type == 'inbound' and 'Receipt Voucher - %s' or 'Payment Voucher - %s') % (object.voucher_number or object.name or 'Draft')</field>
+        </record>
+
+        <!-- Payment Voucher Template with QR Code - Enhanced A4 Optimized -->
+        <template id="report_payment_voucher_qr">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="payment">
+                    <div class="page">
+                        <style type="text/css">
+              /* ===== ENHANCED A4 OPTIMIZED PAYMENT VOUCHER ===== */
+              
+              @page { 
+                  margin: 0mm; 
+                  size: A4; 
+              }
+              
+              /* Reset and Base */
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              /* Main Container - Full A4 Coverage */
+              .pv-wrapper {
+                width: 210mm;
+                min-height: 297mm;
+                margin: 0 auto;
+                border: 3px solid #6B1F35;
+                font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                font-size: 13px;
+                color: #2C2C2C;
+                line-height: 1.6;
+                background: white;
+                display: flex;
+                flex-direction: column;
+              }
+              
+              /* ===== DOCUMENT HEADER SECTION ===== */
+              .document-header {
+                padding: 20px 25px;
+                border-bottom: 3px solid #6B1F35;
+                margin-bottom: 20px;
+                background: linear-gradient(to bottom, #FAF5F7 0%, white 100%);
+              }
+              
+              .header-table {
+                width: 100%;
+                border-collapse: collapse;
+              }
+              
+              .title-info {
+                width: 60%;
+                vertical-align: top;
+                padding-right: 25px;
+              }
+              
+              .company-name {
+                font-size: 28px;
+                font-weight: 700;
+                color: #6B1F35;
+                margin-bottom: 8px;
+                letter-spacing: 0.8px;
+                line-height: 1.3;
+              }
+              
+              .document-title {
+                font-size: 24px;
+                font-weight: 800;
+                color: #4A1525;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 8px;
+                line-height: 1.2;
+              }
+              
+              .document-number {
+                font-size: 16px;
+                color: #6B1F35;
+                font-weight: 600;
+                padding: 6px 12px;
+                background: white;
+                border-left: 4px solid #6B1F35;
+                display: inline-block;
+                margin-top: 5px;
+              }
+              
+              .qr-section {
+                width: 40%;
+                text-align: center;
+                vertical-align: top;
+              }
+              
+              .qr-container {
+                margin-bottom: 12px;
+              }
+              
+              .qr-code-large {
+                width: 110px;
+                height: 110px;
+                border: 3px solid #6B1F35;
+                background: white;
+                padding: 5px;
+                border-radius: 6px;
+                display: block;
+                margin: 0 auto;
+              }
+              
+              .qr-placeholder-large {
+                width: 110px;
+                height: 110px;
+                border: 3px dashed #6B1F35;
+                background: #FAF5F7;
+                line-height: 104px;
+                text-align: center;
+                font-size: 14px;
+                color: #6B1F35;
+                font-weight: 700;
+                border-radius: 6px;
+                margin: 0 auto;
+              }
+              
+              .status-badge-container {
+                text-align: center;
+                margin-top: 10px;
+              }
+              
+              .status-badge {
+                display: inline-block;
+                font-size: 13px;
+                padding: 8px 20px;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: white;
+                border-radius: 5px;
+                letter-spacing: 1.2px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+              }
+              
+              .status-badge.completed {
+                background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+              }
+              
+              .status-badge.draft {
+                background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+              }
+              
+              .status-badge.cancelled {
+                background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+              }
+              
+              .status-badge.pending {
+                background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+              }
+              
+              /* ===== BODY SECTION ===== */
+              .pv-body {
+                padding: 0 25px 25px 25px;
+                flex: 1;
+              }
+              
+              /* Info Grid - Enhanced 2-column layout */
+              .info-grid {
+                width: 100%;
+                margin-bottom: 25px;
+                border-collapse: separate;
+                border-spacing: 0 18px;
+              }
+              
+              .info-row {
+                width: 100%;
+              }
+              
+              .info-cell {
+                width: 50%;
+                vertical-align: top;
+                padding: 0 10px;
+              }
+              
+              .info-item {
+                margin-bottom: 18px;
+              }
+              
+              .info-label {
+                font-size: 12px;
+                color: #6B1F35;
+                text-transform: uppercase;
+                font-weight: 700;
+                margin-bottom: 6px;
+                letter-spacing: 1px;
+              }
+              
+              .info-value {
+                font-size: 15px;
+                color: #2C2C2C;
+                padding: 10px 15px;
+                background: #FAF5F7;
+                border-left: 4px solid #6B1F35;
+                line-height: 1.5;
+                min-height: 42px;
+                display: flex;
+                align-items: center;
+                border-radius: 3px;
+                font-weight: 500;
+              }
+              
+              /* ===== AMOUNT SECTION - PROMINENT ===== */
+              .amount-section {
+                background: linear-gradient(135deg, #6B1F35 0%, #4A1525 100%);
+                padding: 25px 30px;
+                margin: 25px 0;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(107, 31, 53, 0.35);
+              }
+              
+              .amount-grid {
+                width: 100%;
+              }
+              
+              .amount-left {
+                width: 40%;
+                vertical-align: middle;
+                text-align: center;
+                border-right: 3px solid rgba(255,255,255,0.3);
+                padding-right: 20px;
+              }
+              
+              .amount-display {
+                font-size: 36px;
+                font-weight: 800;
+                color: white;
+                letter-spacing: 1.5px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                line-height: 1.2;
+              }
+              
+              .currency-badge {
+                display: inline-block;
+                background: rgba(255,255,255,0.3);
+                color: white;
+                padding: 5px 12px;
+                font-size: 14px;
+                margin-right: 8px;
+                border-radius: 4px;
+                font-weight: 700;
+                letter-spacing: 0.8px;
+              }
+              
+              .amount-right {
+                width: 60%;
+                vertical-align: middle;
+                padding-left: 20px;
+              }
+              
+              .amount-words {
+                font-size: 16px;
+                color: white;
+                font-style: italic;
+                line-height: 1.6;
+                font-weight: 500;
+              }
+              
+              /* ===== WORKFLOW PROGRESS BAR ===== */
+              .workflow-section {
+                margin: 25px 0;
+                padding: 20px 25px;
+                background: #FAF5F7;
+                border-radius: 6px;
+                border: 2px solid #E8D5DC;
+              }
+              
+              .workflow-title {
+                font-size: 13px;
+                color: #6B1F35;
+                text-transform: uppercase;
+                font-weight: 700;
+                margin-bottom: 18px;
+                text-align: center;
+                letter-spacing: 1.5px;
+              }
+              
+              .workflow-bar {
+                width: 100%;
+                border-collapse: collapse;
+              }
+              
+              .workflow-step {
+                width: 25%;
+                text-align: center;
+                position: relative;
+                padding: 8px 4px;
+              }
+              
+              .step-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: #DDD;
+                border: 3px solid #CCC;
+                color: #999;
+                font-size: 16px;
+                font-weight: 700;
+                line-height: 34px;
+                margin: 0 auto 8px;
+                text-align: center;
+              }
+              
+              .workflow-step.done .step-icon {
+                background: linear-gradient(135deg, #6B1F35 0%, #8B2F45 100%);
+                border-color: #6B1F35;
+                color: white;
+                box-shadow: 0 2px 6px rgba(107, 31, 53, 0.4);
+              }
+              
+              .step-label {
+                font-size: 12px;
+                color: #666;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                line-height: 1.3;
+              }
+              
+              .workflow-step.done .step-label {
+                color: #6B1F35;
+                font-weight: 700;
+              }
+              
+              /* ===== SIGNATURES - 2x2 GRID ===== */
+              .signature-section {
+                margin-top: 30px;
+                padding-top: 25px;
+                border-top: 3px solid #6B1F35;
+              }
+              
+              .signature-grid {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 15px;
+              }
+              
+              .signature-cell {
+                width: 50%;
+                padding: 0;
+              }
+              
+              .signature-box {
+                border: 2px solid #6B1F35;
+                padding: 15px 12px;
+                background: #FAF5F7;
+                height: 85px;
+                border-radius: 5px;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+              }
+              
+              .signature-line {
+                border-bottom: 2px solid #6B1F35;
+                margin: 0 8px 8px;
+                flex: 1;
+              }
+              
+              .signature-name {
+                font-weight: 700;
+                color: #2C2C2C;
+                font-size: 14px;
+                text-align: center;
+                line-height: 1.3;
+              }
+              
+              .signature-title {
+                font-size: 11px;
+                color: #6B1F35;
+                text-align: center;
+                margin-top: 4px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+              }
+              
+              .signature-date {
+                font-size: 10px;
+                color: #666;
+                text-align: center;
+                margin-top: 3px;
+                font-weight: 500;
+              }
+              
+              .recipient-box {
+                border: 3px solid #6B1F35;
+                background: linear-gradient(to bottom, #FAF5F7 0%, #F0E5EA 100%);
+              }
+              
+              /* ===== FOOTER ===== */
+              .pv-footer {
+                background: #4A1525;
+                padding: 15px 25px;
+                font-size: 11px;
+                color: rgba(255,255,255,0.9);
+                margin-top: auto;
+              }
+              
+              .footer-grid {
+                width: 100%;
+              }
+              
+              .footer-left {
+                text-align: left;
+                color: rgba(255,255,255,0.9);
+                line-height: 1.6;
+              }
+              
+              .footer-right {
+                text-align: right;
+                color: rgba(255,255,255,0.9);
+                line-height: 1.6;
+              }
+              
+              .footer-label {
+                font-weight: 700;
+                color: white;
+              }
+              
+              /* ===== PRINT OPTIMIZATION ===== */
+              @media print {
+                .pv-wrapper {
+                  border: none;
+                  max-width: 100%;
+                  font-size: 12px;
+                }
+                
+                .page {
+                  page-break-after: always;
+                  margin: 0;
+                  padding: 0;
+                  page-break-inside: avoid;
+                }
+                
+                .signature-section {
+                  page-break-inside: avoid;
+                }
+                
+                .amount-section {
+                  page-break-inside: avoid;
+                }
+              }
+                        </style>
+
+                        <div class="pv-wrapper">
+                            <!-- ===== DOCUMENT HEADER SECTION ===== -->
+                            <div class="document-header">
+                                <table class="header-table">
+                                    <tr>
+                                        <td class="title-info">
+                                            <div class="company-name">
+                                                <t t-esc="payment.company_id.name or ''"/>
+                                            </div>
+                                            <div class="document-title">
+                                                <t t-if="payment.payment_type == 'inbound'">RECEIPT VOUCHER</t>
+                                                <t t-elif="payment.payment_type == 'outbound'">PAYMENT VOUCHER</t>
+                                                <t t-else="">PAYMENT VOUCHER</t>
+                                            </div>
+                                            <div class="document-number">
+                        NO: <t t-esc="payment.voucher_number or payment.name or 'DRAFT'"/>
+                                            </div>
+                                        </td>
+                                        <td class="qr-section">
+                                            <div class="qr-container">
+                                                <!-- QR Code Display with multiple fallbacks -->
+                                                <t t-if="payment.qr_code">
+                                                    <img t-att-src="image_data_uri(payment.qr_code)" class="qr-code-large" alt="QR Code"/>
+                                                </t>
+                                                <t t-elif="payment.qr_code_invoice">
+                                                    <img t-att-src="'data:image/png;base64,%s' % (payment.qr_code_invoice.decode('utf-8') if isinstance(payment.qr_code_invoice, bytes) else payment.qr_code_invoice)" class="qr-code-large" alt="QR Code"/>
+                                                </t>
+                                                <t t-elif="payment.qr_image">
+                                                    <img t-att-src="'data:image/png;base64,%s' % (payment.qr_image.decode('utf-8') if isinstance(payment.qr_image, bytes) else payment.qr_image)" class="qr-code-large" alt="QR Code"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <div class="qr-placeholder-large">QR CODE</div>
+                                                </t>
+                                            </div>
+                                            <div class="status-badge-container">
+                                                <!-- Status Badge -->
+                                                <t t-if="payment.state == 'posted'">
+                                                    <span class="status-badge completed">POSTED</span>
+                                                </t>
+                                                <t t-elif="payment.state == 'draft'">
+                                                    <span class="status-badge draft">DRAFT</span>
+                                                </t>
+                                                <t t-elif="payment.state == 'cancelled'">
+                                                    <span class="status-badge cancelled">CANCELLED</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="status-badge pending">PENDING</span>
+                                                </t>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- ===== BODY ===== -->
+                            <div class="pv-body">
+                                <!-- Payment Information Grid - 2 Columns -->
+                                <table class="info-grid">
+                                    <tr class="info-row">
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">
+                                                    <t t-if="payment.payment_type == 'inbound'">Received From</t>
+                                                    <t t-else="">Paid To</t>
+                                                </div>
+                                                <div class="info-value">
+                                                    <t t-esc="payment.partner_id.name or 'N/A'"/>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">Payment Date</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.date">
+                                                        <span t-field="payment.date" t-options='{"widget":"date", "format":"dd MMM yyyy"}'/>
+                                                    </t>
+                                                    <t t-else="">Not specified</t>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="info-row">
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">Payment Method</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.payment_method_line_id">
+                                                        <t t-esc="payment.payment_method_line_id.name"/>
+                                                    </t>
+                                                    <t t-elif="payment.journal_id">
+                                                        <t t-esc="payment.journal_id.name"/>
+                                                    </t>
+                                                    <t t-else="">N/A</t>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">Transaction Type</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.payment_type == 'inbound'">Customer Receipt</t>
+                                                    <t t-elif="payment.payment_type == 'outbound'">Vendor Payment</t>
+                                                    <t t-else="">
+                                                        <t t-esc="payment.payment_type or 'N/A'"/>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="info-row">
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">Reference / Memo</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.payment_reference">
+                                                        <t t-esc="payment.payment_reference"/>
+                                                    </t>
+                                                    <t t-elif="payment.ref">
+                                                        <t t-esc="payment.ref"/>
+                                                    </t>
+                                                    <t t-else="">No reference</t>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="info-cell">
+                                            <div class="info-item">
+                                                <div class="info-label">Contact Phone</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.partner_id.phone">
+                                                        <t t-esc="payment.partner_id.phone"/>
+                                                    </t>
+                                                    <t t-elif="payment.partner_id.mobile">
+                                                        <t t-esc="payment.partner_id.mobile"/>
+                                                    </t>
+                                                    <t t-else="">Not provided</t>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="info-row">
+                                        <td class="info-cell" colspan="2">
+                                            <div class="info-item">
+                                                <div class="info-label">Remarks / Notes</div>
+                                                <div class="info-value">
+                                                    <t t-if="payment.remarks">
+                                                        <t t-esc="payment.remarks"/>
+                                                    </t>
+                                                    <t t-else="">—</t>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Amount Section - Prominent Display -->
+                                <div class="amount-section">
+                                    <table class="amount-grid">
+                                        <tr>
+                                            <td class="amount-left">
+                                                <div class="amount-display">
+                                                    <span class="currency-badge">
+                                                        <t t-esc="payment.currency_id.name or 'AED'"/>
+                                                    </span>
+                                                    <t t-esc="'{:,.2f}'.format(payment.amount or 0)"/>
+                                                </div>
+                                            </td>
+                                            <td class="amount-right">
+                                                <div class="amount-words">
+                                                    <t t-if="payment.amount and payment.currency_id">
+                                                        <t t-esc="payment.currency_id.amount_to_text(payment.amount).replace('and Zero Cent','').replace('Dirham','Dirhams').strip()"/>
+                                                    </t>
+                                                    <t t-else="">Zero</t>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <!-- Workflow Progress Bar -->
+                                <div class="workflow-section">
+                                    <div class="workflow-title">Approval Workflow Status</div>
+                                    <table class="workflow-bar">
+                                        <tr>
+                                            <td t-attf-class="workflow-step #{payment.reviewer_id and 'done' or ''}">
+                                                <div class="step-icon">✓</div>
+                                                <div class="step-label">Reviewed</div>
+                                            </td>
+                                            <td t-attf-class="workflow-step #{payment.approver_id and 'done' or ''}">
+                                                <div class="step-icon">✓</div>
+                                                <div class="step-label">Approved</div>
+                                            </td>
+                                            <td t-attf-class="workflow-step #{payment.authorizer_id and 'done' or ''}">
+                                                <div class="step-icon">✓</div>
+                                                <div class="step-label">Authorized</div>
+                                            </td>
+                                            <td t-attf-class="workflow-step #{payment.state == 'posted' and 'done' or ''}">
+                                                <div class="step-icon">✓</div>
+                                                <div class="step-label">Posted</div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <!-- Signatures - 2x2 Grid with Enhanced Spacing -->
+                                <div class="signature-section">
+                                    <table class="signature-grid">
+                                        <tr>
+                                            <td class="signature-cell">
+                                                <div class="signature-box">
+                                                    <div class="signature-line"></div>
+                                                    <div>
+                                                        <div class="signature-name">
+                                                            <t t-if="payment.reviewer_id">
+                                                                <t t-esc="payment.reviewer_id.name"/>
+                                                            </t>
+                                                            <t t-else="">_________________</t>
+                                                        </div>
+                                                        <div class="signature-title">Reviewed By</div>
+                                                        <div class="signature-date">
+                                                            <t t-if="payment.reviewer_date">
+                                                                <span t-field="payment.reviewer_date" t-options='{"widget":"date", "format":"dd/MM/yyyy"}'/>
+                                                            </t>
+                                                            <t t-else="">Date: __________</t>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="signature-cell">
+                                                <div class="signature-box">
+                                                    <div class="signature-line"></div>
+                                                    <div>
+                                                        <div class="signature-name">
+                                                            <t t-if="payment.approver_id">
+                                                                <t t-esc="payment.approver_id.name"/>
+                                                            </t>
+                                                            <t t-else="">_________________</t>
+                                                        </div>
+                                                        <div class="signature-title">Approved By</div>
+                                                        <div class="signature-date">
+                                                            <t t-if="payment.approver_date">
+                                                                <span t-field="payment.approver_date" t-options='{"widget":"date", "format":"dd/MM/yyyy"}'/>
+                                                            </t>
+                                                            <t t-else="">Date: __________</t>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td class="signature-cell">
+                                                <div class="signature-box">
+                                                    <div class="signature-line"></div>
+                                                    <div>
+                                                        <div class="signature-name">
+                                                            <t t-if="payment.authorizer_id">
+                                                                <t t-esc="payment.authorizer_id.name"/>
+                                                            </t>
+                                                            <t t-else="">_________________</t>
+                                                        </div>
+                                                        <div class="signature-title">Authorized By</div>
+                                                        <div class="signature-date">
+                                                            <t t-if="payment.authorizer_date">
+                                                                <span t-field="payment.authorizer_date" t-options='{"widget":"date", "format":"dd/MM/yyyy"}'/>
+                                                            </t>
+                                                            <t t-else="">Date: __________</t>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="signature-cell">
+                                                <div class="signature-box recipient-box">
+                                                    <div class="signature-line"></div>
+                                                    <div>
+                                                        <div class="signature-name">
+                                                            <t t-esc="payment.partner_id.name or '_________________'"/>
+                                                        </div>
+                                                        <div class="signature-title">Received By</div>
+                                                        <div class="signature-date">Date: __________</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- ===== FOOTER ===== -->
+                            <div class="pv-footer">
+                                <table class="footer-grid">
+                                    <tr>
+                                        <td class="footer-left" style="width: 60%;">
+                                            <span class="footer-label">Document ID:</span>
+                                            <t t-esc="payment.id or 'N/A'"/>
+                                            <span style="margin: 0 10px;">|</span>
+                                            <span class="footer-label">Reference:</span>
+                                            <t t-esc="payment.voucher_number or payment.name or 'N/A'"/>
+                                        </td>
+                                        <td class="footer-right" style="width: 40%;">
+                                            <span class="footer-label">Created By:</span>
+                                            <t t-esc="payment.create_uid.name or 'N/A'"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

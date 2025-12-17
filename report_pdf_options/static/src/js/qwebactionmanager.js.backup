@@ -1,0 +1,162 @@
+/** @odoo-module **/
+
+import { _t } from "@web/core/l10n/translation";
+import { registry } from "@web/core/registry";
+import { PdfOptionsModal } from "./PdfOptionsModal";
+
+function getWKHTMLTOPDF_MESSAGES(status) {
+    const link = '<br><br><a href="http://wkhtmltopdf.org/" target="_blank">wkhtmltopdf.org</a>';
+    const _status = {
+        broken:
+            _t(
+                "Your installation of Wkhtmltopdf seems to be broken. The report will be shown in html."
+            ) + link,
+        install:
+            _t("Unable to find Wkhtmltopdf on this system. The report will be shown in html.") +
+            link,
+        upgrade:
+            _t(
+                "You should upgrade your version of Wkhtmltopdf to at least 0.12.0 in order to get a correct display of headers and footers as well as support for table-breaking between pages."
+            ) + link,
+        workers: _t(
+            "You need to start Odoo with at least two workers to print a pdf version of the reports."
+        ),
+    };
+    return _status[status];
+}
+
+let iframeForReport;
+
+function printPdf(url, callback) {
+    let iframe = iframeForReport;
+    if (!iframe) {
+        iframe = iframeForReport = document.createElement('iframe');
+        iframe.className = 'pdfIframe'
+        document.body.appendChild(iframe);
+        iframe.style.display = 'none';
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+    }
+    
+    // Clean up old source to prevent conflicts
+    iframe.src = '';
+    
+    iframe.onload = function () {
+        // Delay to ensure PDF is loaded before printing
+        setTimeout(function () {
+            try {
+                iframe.focus();
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.error('Print error:', e);
+            }
+            // Clean up after printing with delay
+            setTimeout(function() {
+                if (url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+                callback();
+            }, 500);
+        }, 100);
+    };
+    
+    iframe.onerror = function() {
+        console.error('Error loading PDF');
+        callback();
+    };
+    
+    iframe.src = url;
+}
+
+function getReportUrl(action, type) {
+    let url = ;
+    const actionContext = action.context || {};
+    if (action.data && JSON.stringify(action.data) !== "{}") {
+        const options = encodeURIComponent(JSON.stringify(action.data));
+        const context = encodeURIComponent(JSON.stringify(actionContext));
+        url += ;
+    } else {
+        if (actionContext.active_ids) {
+            url += ;
+        }
+        if (type === "html") {
+            const context = encodeURIComponent(JSON.stringify(env.services.user.context));
+            url += ;
+        }
+    }
+    return url;
+}
+
+let wkhtmltopdfStateProm;
+
+registry
+    .category("ir.actions.report handlers")
+    .add("pdf_report_options_handler", async function (action, options, env) {
+        let { default_print_option, report_type } = action;
+        if (report_type !== "qweb-pdf" || default_print_option === "download")
+            return false;
+        if (!default_print_option) {
+            let removeDialog;
+            default_print_option = await new Promise(resolve => {
+                removeDialog = env.services.dialog.add(
+                    PdfOptionsModal,
+                    {
+                        onSelectOption: (option) => {
+                            return resolve(option);
+                        }
+                    },
+                    {
+                        onClose: () => {
+                            resolve("close");
+                        }
+                    }
+                );
+            });
+            removeDialog();
+            if (default_print_option === "close")
+                return true;
+            if (default_print_option === "download")
+                return false;
+        }
+
+        // check the state of wkhtmltopdf before proceeding
+        if (!wkhtmltopdfStateProm) {
+            wkhtmltopdfStateProm = await env.services.rpc("/report/check_wkhtmltopdf");
+        }
+        const state = wkhtmltopdfStateProm;
+        // display a notification according to wkhtmltopdf's state
+        const message = getWKHTMLTOPDF_MESSAGES(state)
+        if (message) {
+            env.services.notification.add(message, {
+                sticky: true,
+                title: _t("Report"),
+            });
+        }
+        if (["upgrade", "ok"].includes(state)) {
+            const url = getReportUrl(action, "pdf");
+            if (default_print_option === "print") {
+                // Use shorter blocking time to prevent session timeout
+                env.services.ui.block();
+                try {
+                    printPdf(url, () => {
+                        env.services.ui.unblock();
+                    });
+                    // Unblock after maximum 3 seconds to prevent session timeout
+                    setTimeout(() => {
+                        env.services.ui.unblock();
+                    }, 3000);
+                } catch (e) {
+                    console.error('Print error:', e);
+                    env.services.ui.unblock();
+                }
+            }
+            if (default_print_option === "open") {
+                window.open(url, '_blank');
+            }
+            return true;
+        } else {
+            return _executeReportClientAction(action, options);
+        }
+    })

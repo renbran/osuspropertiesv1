@@ -1,0 +1,317 @@
+"""Smart Report Helper for Dynamic Invoice/Bill Reports"""
+from odoo import models
+import logging
+
+_logger = logging.getLogger(__name__)
+
+
+class SmartReportHelper(models.AbstractModel):
+    """Helper model providing smart report logic for invoices and bills"""
+    _name = 'report.smart.helper'
+    _description = 'Smart Report Helper'
+
+    # ===== REPORT TYPE DETECTION =====
+    @staticmethod
+    def detect_document_type(move):
+        """Detect if document is invoice, bill, or credit note"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return 'bill'
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return 'invoice'
+        elif move.move_type in ['in_refund', 'out_refund']:
+            return 'credit_note'
+        return 'unknown'
+
+    @staticmethod
+    def is_bill(move):
+        """Check if document is a bill (vendor invoice)"""
+        return move.move_type in ['in_invoice', 'in_refund']
+
+    @staticmethod
+    def is_invoice(move):
+        """Check if document is an invoice (customer invoice)"""
+        return move.move_type in ['out_invoice', 'out_refund']
+
+    @staticmethod
+    def is_credit_note(move):
+        """Check if document is a credit note"""
+        return move.move_type in ['in_refund', 'out_refund']
+
+    @staticmethod
+    def is_commission_document(move):
+        """Check if document is commission-related"""
+        commission_keywords = ['commission', 'commission_ax', 'broker']
+        return any(keyword in (move.ref or '').lower() for keyword in commission_keywords)
+
+    # ===== HEADER CUSTOMIZATION =====
+    @staticmethod
+    def get_document_title(move):
+        """Get appropriate document title based on type"""
+        if move.move_type == 'in_invoice':
+            return 'VENDOR BILL'
+        elif move.move_type == 'out_invoice':
+            return 'CUSTOMER INVOICE'
+        elif move.move_type == 'in_refund':
+            return 'VENDOR CREDIT NOTE'
+        elif move.move_type == 'out_refund':
+            return 'CUSTOMER CREDIT NOTE'
+        return 'DOCUMENT'
+
+    @staticmethod
+    def get_header_color(move):
+        """Get header color based on document type"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return '#800020'  # Dark red for bills
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return '#1a5c96'  # Dark blue for invoices
+        return '#333333'
+
+    @staticmethod
+    def get_accent_color(move):
+        """Get accent color based on document type"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return '#a00030'
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return '#2a7cbd'
+        return '#555555'
+
+    # ===== AMOUNT DISPLAY =====
+    @staticmethod
+    def format_amount(amount, currency_symbol='AED'):
+        """Format amount with proper currency"""
+        if amount is None:
+            amount = 0
+        return '{:,.2f} {}'.format(float(amount), currency_symbol)
+
+    @staticmethod
+    def format_currency(amount):
+        """Format currency amount"""
+        if amount is None:
+            amount = 0
+        return '{:,.2f}'.format(float(amount))
+
+    # ===== PARTNER DETAILS =====
+    @staticmethod
+    def get_sender_label(move):
+        """Get appropriate sender label (Company or Vendor)"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return 'FROM (Vendor)'
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return 'FROM (Company)'
+        return 'FROM'
+
+    @staticmethod
+    def get_receiver_label(move):
+        """Get appropriate receiver label (Customer or Company)"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return 'TO (Company)'
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return 'TO (Customer)'
+        return 'TO'
+
+    @staticmethod
+    def get_partner_details(move):
+        """Get partner info based on document type"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            return move.partner_id
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            return move.partner_id
+        return None
+
+    # ===== TABLE CUSTOMIZATION =====
+    @staticmethod
+    def get_table_headers(move, include_commission=False):
+        """Get dynamic table headers based on document type"""
+        base_headers = ['Description', 'Quantity', 'Unit Price', 'VAT', 'Amount']
+
+        if include_commission and SmartReportHelper.is_commission_document(move):
+            base_headers.insert(2, 'Commission Rate')
+
+        return base_headers
+
+    @staticmethod
+    def should_show_commission_details(move):
+        """Determine if commission details should be displayed"""
+        return SmartReportHelper.is_commission_document(move)
+
+    @staticmethod
+    def should_show_project_details(move):
+        """Determine if project details should be displayed"""
+        has_project = any(line.analytic_distribution for line in move.invoice_line_ids)
+        return has_project
+
+    @staticmethod
+    def should_show_payment_terms(move):
+        """Determine if payment terms should be displayed"""
+        return move.invoice_payment_term_id is not None
+
+    # ===== FOOTER CUSTOMIZATION =====
+    @staticmethod
+    def get_payment_instructions(move):
+        """Get payment instructions based on document type"""
+        if move.move_type in ['in_invoice', 'in_refund']:
+            # For bills, show company payment details
+            return {
+                'bank_name': 'ABU DHABI COMMERCIAL BANK (ADCB)',
+                'account_name': 'OSUS REAL ESTATE BROKERAGE LLC',
+                'account_no': '14041417820001 - AED',
+                'iban': 'AE350030014041417820001',
+                'payment_terms': 'Please pay within 14 days'
+            }
+        elif move.move_type in ['out_invoice', 'out_refund']:
+            # For invoices, show customer's terms
+            return {
+                'payment_method': move.invoice_payment_term_id.name if move.invoice_payment_term_id else 'As per agreement',
+                'payment_terms': 'Please remit payment within agreed terms'
+            }
+        return {}
+
+    @staticmethod
+    def should_show_payment_instructions(move):
+        """Determine if payment instructions should be displayed"""
+        return move.move_type in ['in_invoice', 'out_invoice']
+
+    # ===== NOTES & REFERENCES =====
+    @staticmethod
+    def get_reference_info(move):
+        """Get reference info to display"""
+        info = {}
+        if move.ref:
+            info['reference'] = move.ref
+        if move.invoice_origin:
+            info['origin'] = move.invoice_origin
+        if move.partner_ref:
+            info['partner_ref'] = move.partner_ref
+        return info
+
+    @staticmethod
+    def should_show_notes(move):
+        """Determine if notes section should be displayed"""
+        return bool(move.narration)
+
+    # ===== STATE-BASED STYLING =====
+    @staticmethod
+    def get_state_badge_class(move):
+        """Get CSS class for state badge"""
+        state_classes = {
+            'draft': 'badge-secondary',
+            'posted': 'badge-success',
+            'cancel': 'badge-danger',
+        }
+        return state_classes.get(move.state, 'badge-info')
+
+    @staticmethod
+    def should_show_draft_banner(move):
+        """Show draft warning banner"""
+        return move.state == 'draft'
+
+    @staticmethod
+    def should_show_paid_stamp(move):
+        """Show paid stamp if fully reconciled"""
+        return move.payment_state == 'paid'
+
+    # ===== ADVANCED FEATURES =====
+    @staticmethod
+    def should_include_qr_code(move):
+        """Determine if QR code should be included"""
+        return hasattr(move, 'qr_code') and move.qr_code
+
+    @staticmethod
+    def should_include_signature_block(move):
+        """Determine if signature block needed"""
+        return move.move_type in ['out_invoice', 'out_refund']
+
+    @staticmethod
+    def get_line_details_fields(move):
+        """Get which fields to display in line items"""
+        fields_config = {
+            'description': True,
+            'quantity': True,
+            'unit_price': True,
+            'vat_rate': True,
+            'vat_amount': True,
+            'line_total': True,
+        }
+
+        # Add commission fields for commission documents
+        if SmartReportHelper.is_commission_document(move):
+            fields_config['commission_rate'] = True
+            fields_config['commission_amount'] = True
+
+        # Add project for project-linked docs
+        if SmartReportHelper.should_show_project_details(move):
+            fields_config['project'] = True
+
+        return fields_config
+
+    # ===== TAX HANDLING =====
+    @staticmethod
+    def get_tax_summary(move):
+        """Get tax summary by tax rate"""
+        tax_dict = {}
+        for line in move.invoice_line_ids:
+            for tax in line.tax_ids:
+                rate = tax.amount
+                if rate not in tax_dict:
+                    tax_dict[rate] = {'lines': [], 'total': 0}
+                tax_dict[rate]['lines'].append(line)
+                tax_dict[rate]['total'] += line.price_tax
+
+        return tax_dict
+
+    @staticmethod
+    def should_show_tax_breakdown(move):
+        """Determine if detailed tax breakdown should be shown"""
+        return len([t for line in move.invoice_line_ids for t in line.tax_ids]) > 0
+
+    # ===== CURRENCY HANDLING =====
+    @staticmethod
+    def get_currency_symbol(move):
+        """Get currency symbol for amounts"""
+        return move.currency_id.symbol or 'AED'
+
+    @staticmethod
+    def should_convert_to_words(amount_value, currency_id=None):
+        """Determine if amount should be shown in words"""
+        try:
+            from num2words import num2words  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    @staticmethod
+    def amount_to_words(amount, currency='AED'):
+        """Convert amount to words"""
+        try:
+            from num2words import num2words
+            return num2words(int(amount), to='currency', currency=currency.lower())
+        except (ImportError, ValueError):
+            return ''
+
+    # ===== PERFORMANCE HELPERS =====
+    @staticmethod
+    def get_condensed_view_threshold():
+        """Lines threshold for condensed view"""
+        return 15
+
+    @staticmethod
+    def should_use_condensed_layout(move):
+        """Determine if condensed layout should be used"""
+        return len(move.invoice_line_ids) > SmartReportHelper.get_condensed_view_threshold()
+
+    # ===== LOCALIZATION =====
+    @staticmethod
+    def format_date_uk(date_obj):
+        """Format date in UK format (DD/MM/YYYY)"""
+        if date_obj:
+            return date_obj.strftime('%d/%m/%Y')
+        return ''
+
+    @staticmethod
+    def get_locale_settings(move):
+        """Get locale settings based on company"""
+        return {
+            'date_format': 'DD/MM/YYYY',
+            'currency': move.currency_id.name or 'AED',
+            'language': move.company_id.partner_id.lang or 'en_US',
+        }

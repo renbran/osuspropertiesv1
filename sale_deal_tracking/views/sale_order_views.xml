@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sale Order Form View: Add Deal Tracking Fields -->
+    <record id="view_order_form_inherit_deal_tracking" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.deal.tracking</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="priority">25</field>        <!-- Load after le_sale_type -->
+        <field name="arch" type="xml">
+            <!-- Add deal stage in the header statusbar area -->
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="deal_stage" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="new,contacted,hot,customer"/>
+            </xpath>
+
+            <!-- Add CRM Lead/Opportunity field AFTER partner_id -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="opportunity_id" string="CRM Lead ID" domain="['|', ('type', '=', 'opportunity'), ('type', '=', 'lead')]" context="{'default_type': 'opportunity', 'default_partner_id': partner_id}"/>
+            </xpath>
+
+            <!-- Add Marketing Tracker page with all tracking fields -->
+            <xpath expr="//page[@name='other_information']" position="after">
+                <page string="Marketing Tracker" name="marketing_tracker_page">
+                    <group name="group_marketing_tracker">
+                        <group string="Deal Information">
+                            <field name="deal_stage" string="Lead Stage"/>
+                            <field name="deal_stage_updated" readonly="1" string="Last Stage Update"/>
+                        </group>
+                        <group string="Marketing Attribution">
+                            <field name="source_id" string="Lead Source" options="{'no_create': True}"/>
+                            <field name="campaign_id" string="Campaign" options="{'no_create': True}"/>
+                            <field name="medium_id" string="Medium" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Sale Order Tree View: Add Deal Tracking Columns -->
+    <record id="view_order_tree_inherit_deal_tracking" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.deal.tracking</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <field name="user_id" position="after">
+                <field name="opportunity_id" optional="hide"/>
+                <field name="deal_stage" optional="show" widget="badge" decoration-success="deal_stage == 'customer'" decoration-warning="deal_stage in ('hot', 'option_sent')" decoration-danger="deal_stage == 'junk'" decoration-muted="deal_stage in ('idle', 'unsuccessful')"/>
+                <field name="source_id" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Sale Order Search View: Add Deal Stage Filters -->
+    <record id="view_sales_order_filter_inherit_deal_tracking" model="ir.ui.view">
+        <field name="name">sale.order.search.inherit.deal.tracking</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <!-- Add search fields -->
+            <field name="name" position="after">
+                <field name="opportunity_id"/>
+                <field name="deal_stage"/>
+                <field name="source_id"/>
+                <field name="campaign_id"/>
+            </field>
+
+            <!-- Add filters at the end of existing filters -->
+            <search position="inside">
+                <separator/>
+                <filter string="New Deals" name="deal_new" domain="[('deal_stage', '=', 'new')]"/>
+                <filter string="Hot Deals" name="deal_hot" domain="[('deal_stage', '=', 'hot')]"/>
+                <filter string="Options Sent" name="deal_option_sent" domain="[('deal_stage', '=', 'option_sent')]"/>
+                <filter string="Won Deals" name="deal_customer" domain="[('deal_stage', '=', 'customer')]"/>
+                <separator/>
+                <filter string="Has Opportunity" name="has_opportunity" domain="[('opportunity_id', '!=', False)]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter string="Deal Stage" name="group_by_deal_stage" context="{'group_by': 'deal_stage'}"/>
+                    <filter string="Lead Source" name="group_by_source" context="{'group_by': 'source_id'}"/>
+                    <filter string="Campaign" name="group_by_campaign" context="{'group_by': 'campaign_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- CRM Lead/Opportunity Form View: Add Deal Stage -->
+    <record id="view_crm_lead_form_inherit_deal_stage" model="ir.ui.view">
+        <field name="name">crm.lead.form.inherit.deal.stage</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add deal stage in header -->
+            <field name="stage_id" position="after">
+                <field name="deal_stage" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="new,contacted,option_sent,hot,customer"/>
+            </field>
+
+            <!-- Add deal stage updated timestamp -->
+            <field name="user_id" position="after">
+                <field name="deal_stage_updated" readonly="1" string="Deal Stage Updated"/>
+            </field>
+
+            <!-- Add smart button for linked sale orders -->
+            <div name="button_box" position="inside">
+                <button class="oe_stat_button" type="object" name="action_view_linked_sale_orders" icon="fa-list-alt" invisible="sale_order_count == 0">
+                    <field string="Quotations" name="sale_order_count" widget="statinfo"/>
+                </button>
+            </div>
+        </field>
+    </record>
+
+</odoo>

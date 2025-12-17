@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- SMART INVOICE REPORT TEMPLATE -->
+    <!-- Dynamically adapts based on document type, content, and configuration -->
+
+    <template id="report_osus_invoice_document_smart">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-set="o" t-value="doc.with_context(lang=lang)"/>
+                <t t-set="format_uk_date" t-value="format_date_uk"/>
+                <t t-set="format_number" t-value="format_currency"/>
+                <t t-set="currency_symbol" t-value="get_currency_symbol(o)"/>
+                <t t-set="doc_title" t-value="get_document_title(o)"/>
+                <t t-set="header_color" t-value="get_header_color(o)"/>
+                <t t-set="accent_color" t-value="get_accent_color(o)"/>
+                <t t-set="tax_summary" t-value="get_tax_summary(o)"/>
+                <t t-set="should_show_tax" t-value="should_show_tax_breakdown(o)"/>
+                <t t-set="payment_instructions" t-value="get_payment_instructions(o)"/>
+                <t t-set="show_payment" t-value="should_show_payment_instructions(o)"/>
+                <t t-set="show_notes" t-value="should_show_notes(o)"/>
+                <t t-set="show_draft_banner" t-value="should_show_draft_banner(o)"/>
+                <t t-set="show_paid_stamp" t-value="should_show_paid_stamp(o)"/>
+
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: Arial, sans-serif;">
+                        <!-- DRAFT BANNER -->
+                        <t t-if="show_draft_banner">
+                            <div style="width: 100%; margin-bottom: 20px;">
+                                <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; padding: 12px; text-align: center; color: #856404;">
+                                    <strong style="font-size: 14px;">⚠️ DRAFT DOCUMENT - NOT YET POSTED</strong>
+                                </div>
+                            </div>
+                        </t>
+
+                        <!-- PAID STAMP -->
+                        <t t-if="show_paid_stamp">
+                            <div style="position: fixed; top: 200px; right: 50px; opacity: 0.3; transform: rotate(-45deg); z-index: 10;">
+                                <div style="border: 3px solid #28a745; border-radius: 10px; padding: 20px; font-size: 40px; font-weight: bold; color: #28a745; text-align: center;">
+                                    PAID
+                                </div>
+                            </div>
+                        </t>
+
+                        <div class="container" style="max-width: 100%;">
+                            <!-- ===== HEADER SECTION ===== -->
+                            <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid" t-attf-style="border-bottom-color: {{ header_color }};">
+                                <div class="row align-items-center mb-3">
+                                    <div class="col-10">
+                                        <h2 class="text-center mb-0" t-attf-style="color: {{ header_color }}; font-size: 24px; font-weight: bold;">
+                                            <span t-out="doc_title"/>
+                                            <span t-field="o.name"/>
+                                        </h2>
+                                    </div>
+                                    <div class="col-2 text-right">
+                                        <!-- QR Code Display -->
+                                        <t t-if="o.qr_in_report and o.qr_image">
+                                            <div style="width:100px;height:100px;float:right;">
+                                                <img t-att-src="'data:image/png;base64,%s' % o.qr_image.decode('utf-8')" 
+                                                     style="max-width:100px;max-height:100px;border:1px solid #ddd;border-radius:4px;" 
+                                                     alt="QR Code"/>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div style="margin-bottom: 8px;">
+                                            <strong style="color: black; font-size: 12px;">Document Date:</strong>
+                                            <span style="color: black;" t-out="format_uk_date(o.invoice_date)"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <div style="margin-bottom: 8px;">
+                                            <strong style="color: black; font-size: 12px;">Due Date:</strong>
+                                            <span style="color: black;" t-out="format_uk_date(o.invoice_date_due)"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STATE BADGE -->
+                                <div class="row" style="margin-top: 10px;">
+                                    <div class="col-12">
+                                        <span t-attf-style="background-color: {{ header_color }}; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">
+                                            Status: <span t-field="o.state" t-options="{'widget': 'selection'}"/>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===== PARTIES SECTION ===== -->
+                            <div class="row mb-4" style="margin-bottom: 30px;">
+                                <!-- FROM PARTY -->
+                                <div class="col-6" style="border-right: 1px solid #eee; padding-right: 20px;">
+                                    <h5 t-attf-style="color: {{ header_color }}; font-weight: bold; font-size: 13px; margin-bottom: 10px;">
+                                        <t t-if="o.move_type in ['in_invoice', 'in_refund']">FROM (Vendor)</t>
+                                        <t t-else="">FROM (Company)</t>
+                                    </h5>
+                                    <div style="color: black; font-size: 12px; line-height: 1.6;">
+                                        <div>
+                                            <strong t-field="o.partner_id.name"/>
+                                        </div>
+                                        <t t-if="o.partner_id.street">
+                                            <div t-field="o.partner_id.street"/>
+                                        </t>
+                                        <t t-if="o.partner_id.street2">
+                                            <div t-field="o.partner_id.street2"/>
+                                        </t>
+                                        <t t-if="o.partner_id.city or o.partner_id.zip">
+                                            <div>
+                                                <span t-field="o.partner_id.city"/>
+                                                <t t-if="o.partner_id.zip">,                                                    <span t-field="o.partner_id.zip"/>
+                                                </t>
+                                            </div>
+                                        </t>
+                                        <t t-if="o.partner_id.country_id">
+                                            <div t-field="o.partner_id.country_id.name"/>
+                                        </t>
+                                        <t t-if="o.partner_id.vat">
+                                            <div style="margin-top: 5px;">
+                                                <strong>VAT/TAX ID:</strong>
+                                                <span t-field="o.partner_id.vat"/>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- TO PARTY -->
+                                <div class="col-6" style="padding-left: 20px;">
+                                    <h5 t-attf-style="color: {{ header_color }}; font-weight: bold; font-size: 13px; margin-bottom: 10px;">
+                                        <t t-if="o.move_type in ['in_invoice', 'in_refund']">TO (Company)</t>
+                                        <t t-else="">TO (Customer)</t>
+                                    </h5>
+                                    <div style="color: black; font-size: 12px; line-height: 1.6;">
+                                        <div>
+                                            <strong t-field="o.company_id.name"/>
+                                        </div>
+                                        <t t-if="o.company_id.street">
+                                            <div t-field="o.company_id.street"/>
+                                        </t>
+                                        <t t-if="o.company_id.city or o.company_id.zip">
+                                            <div>
+                                                <span t-field="o.company_id.city"/>
+                                                <t t-if="o.company_id.zip">,                                                    <span t-field="o.company_id.zip"/>
+                                                </t>
+                                            </div>
+                                        </t>
+                                        <t t-if="o.company_id.vat">
+                                            <div style="margin-top: 5px;">
+                                                <strong>VAT/TAX ID:</strong>
+                                                <span t-field="o.company_id.vat"/>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===== LINE ITEMS TABLE ===== -->
+                            <div style="margin-bottom: 30px;">
+                                <table class="table table-bordered" style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
+                                    <thead>
+                                        <tr t-attf-style="background-color: {{ header_color }}; color: white; font-weight: bold;">
+                                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; color: white;">Description</th>
+                                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; color: white; width: 80px;">Qty</th>
+                                            <th style="border: 1px solid #ddd; padding: 10px; text-align: right; color: white; width: 100px;">Unit Price</th>
+                                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; color: white; width: 70px;">VAT %</th>
+                                            <th style="border: 1px solid #ddd; padding: 10px; text-align: right; color: white; width: 100px;">Line Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="o.invoice_line_ids" t-as="line">
+                                            <tr style="border: 1px solid #ddd;">
+                                                <td style="border: 1px solid #ddd; padding: 10px; color: black; font-size: 12px;">
+                                                    <span t-field="line.name"/>
+                                                </td>
+                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; color: black; font-size: 12px;">
+                                                    <span t-field="line.quantity"/>
+                                                </td>
+                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right; color: black; font-size: 12px;">
+                                                    <span t-esc="format_number(line.price_unit)"/>
+                                                    <span t-out="currency_symbol"/>
+                                                </td>
+                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; color: black; font-size: 12px;">
+                                                    <t t-set="tax_rate" t-value="line.tax_ids[0].amount if line.tax_ids else 0"/>
+                                                    <span t-esc="'%.0f' % tax_rate"/>
+%
+                                                </td>
+                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right; color: black; font-size: 12px; font-weight: bold;">
+                                                    <span t-esc="format_number(line.price_total)"/>
+                                                    <span t-out="currency_symbol"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- ===== AMOUNTS SECTION ===== -->
+                            <div class="row justify-content-end" style="margin-bottom: 30px;">
+                                <div class="col-5">
+                                    <!-- DETAILED TAX BREAKDOWN (if applicable) -->
+                                    <t t-if="should_show_tax">
+                                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                                            <t t-foreach="tax_summary.items()" t-as="tax_item">
+                                                <t t-set="tax_rate" t-value="tax_item[0]"/>
+                                                <t t-set="tax_data" t-value="tax_item[1]"/>
+                                                <tr t-attf-style="background-color: {{ accent_color }}; color: white;">
+                                                    <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">
+                                                        Tax (<span t-esc="'%.0f' % tax_rate"/>
+%)
+                                                    </td>
+                                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-size: 12px;">
+                                                        <span t-esc="format_number(tax_data['total'])"/>
+                                                        <span t-out="currency_symbol"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </table>
+                                    </t>
+
+                                    <!-- TOTALS -->
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <tr t-attf-style="background-color: {{ header_color }}; color: white; font-weight: bold;">
+                                            <td style="border: 1px solid #ddd; padding: 10px; font-size: 13px;">Subtotal (Before Tax)</td>
+                                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-size: 13px;">
+                                                <span t-esc="format_number(o.amount_untaxed)"/>
+                                                <span t-out="currency_symbol"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-attf-style="background-color: {{ accent_color }}; color: white; font-weight: bold;">
+                                            <td style="border: 1px solid #ddd; padding: 10px; font-size: 13px;">Total Tax</td>
+                                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-size: 13px;">
+                                                <span t-esc="format_number(o.amount_tax)"/>
+                                                <span t-out="currency_symbol"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-attf-style="background-color: {{ header_color }}; color: white; font-weight: bold; border: 2px solid {{ accent_color }};">
+                                            <td style="border: 1px solid #ddd; padding: 12px; font-size: 14px;">TOTAL AMOUNT DUE</td>
+                                            <td style="border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 14px;">
+                                                <span t-esc="format_number(o.amount_total)"/>
+                                                <span t-out="currency_symbol"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- ===== PAYMENT INSTRUCTIONS (Dynamic based on doc type) ===== -->
+                            <t t-if="show_payment and payment_instructions">
+                                <div style="margin-bottom: 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid" t-attf-style="border-left-color: {{ header_color }};">
+                                    <h4 t-attf-style="color: {{ header_color }}; font-size: 13px; margin-bottom: 10px; margin-top: 0;">Payment Instructions</h4>
+
+                                    <t t-if="o.move_type in ['in_invoice', 'in_refund']">
+                                        <!-- BANK DETAILS FOR VENDOR BILLS -->
+                                        <div style="color: black; font-size: 11px; line-height: 1.8;">
+                                            <div style="margin-bottom: 5px;">
+                                                <span t-out="payment_instructions.get('payment_terms', 'Please pay within 14 days to the account below:')"/>
+                                            </div>
+                                            <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                                                <tr>
+                                                    <td style="width: 30%; font-weight: bold; padding: 4px;">Bank Name</td>
+                                                    <td style="padding: 4px;">
+                                                        <span t-out="payment_instructions.get('bank_name', 'National Bank of Fujairah')"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="font-weight: bold; padding: 4px;">Account Name</td>
+                                                    <td style="padding: 4px;">
+                                                        <span t-out="payment_instructions.get('account_name', 'OSUS REAL ESTATE BROKERAGE LLC')"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="font-weight: bold; padding: 4px;">Account Number</td>
+                                                    <td style="padding: 4px;">
+                                                        <span t-out="payment_instructions.get('account_no', '012371961346')"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="font-weight: bold; padding: 4px;">IBAN</td>
+                                                    <td style="padding: 4px;">
+                                                        <span t-out="payment_instructions.get('iban', 'AE870380000012371961346')"/>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </t>
+
+                                    <t t-else="">
+                                        <!-- PAYMENT TERMS FOR CUSTOMER INVOICES -->
+                                        <div style="color: black; font-size: 11px;">
+                                            <t t-if="o.invoice_payment_term_id">
+                                                <div>
+                                                    <strong>Payment Term:</strong>
+                                                    <span t-field="o.invoice_payment_term_id.name"/>
+                                                </div>
+                                            </t>
+                                            <t t-if="o.payment_state">
+                                                <div>
+                                                    <strong>Payment Status:</strong>
+                                                    <span t-field="o.payment_state" t-options="{'widget': 'selection'}"/>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <!-- ===== NOTES SECTION ===== -->
+                            <t t-if="show_notes">
+                                <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f7ff; border-left: 4px solid #0056b3;">
+                                    <h5 style="color: #0056b3; font-size: 12px; margin-bottom: 8px; margin-top: 0;">Notes</h5>
+                                    <div style="color: black; font-size: 11px; white-space: pre-wrap;">
+                                        <span t-field="o.narration"/>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- ===== FOOTER ===== -->
+                            <div style="text-align: center; color: black; font-size: 10px; margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+                                <p style="margin: 5px 0;">This is a computer-generated document. No signature or stamp required.</p>
+                                <p style="margin: 5px 0; color: #666;">
+                                    Generated on <span t-esc="format_uk_date(datetime.now().date())" t-options="{'widget': 'date'}"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>
