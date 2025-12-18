@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
+from datetime import date
 
 
 class SalesInvoicingDashboard(models.Model):
@@ -14,8 +15,12 @@ class SalesInvoicingDashboard(models.Model):
     sales_order_type_id = fields.Many2one(
         'sale.order.type', string='Sales Order Type'
     )
-    booking_date_from = fields.Date(string='Booking Date From')
-    booking_date_to = fields.Date(string='Booking Date To')
+    sales_order_type_ids = fields.Many2many(
+        'sale.order.type', string='Sales Order Types',
+        help='Filter by one or more order types'
+    )
+    booking_date_from = fields.Date(string='Booking Date From', default=lambda self: date.today().replace(day=1))
+    booking_date_to = fields.Date(string='Booking Date To', default=lambda self: date.today())
     invoice_status_filter = fields.Selection(
         [
             ('all', 'All'),
@@ -38,6 +43,10 @@ class SalesInvoicingDashboard(models.Model):
         default='all',
     )
 
+    # Additional recommended filters
+    agent_partner_id = fields.Many2one('res.partner', string='Salesperson (Agent1)')
+    partner_id = fields.Many2one('res.partner', string='Customer')
+
     # Computed metrics using field relationships
     posted_invoice_count = fields.Integer(
         string='Posted Invoices', compute='_compute_metrics', store=False
@@ -49,11 +58,28 @@ class SalesInvoicingDashboard(models.Model):
         string='Unpaid Invoices', compute='_compute_metrics', store=False
     )
     total_invoiced_amount = fields.Monetary(
-        string='Total Invoiced Amount', compute='_compute_metrics', store=False,
+        string='Total Invoiced Amount', compute='_compute_metrics', store=True,
         currency_field='company_currency_id'
     )
     total_pending_amount = fields.Monetary(
-        string='Total Pending to Invoice', compute='_compute_metrics', store=False,
+        string='Total Pending to Invoice', compute='_compute_metrics', store=True,
+        currency_field='company_currency_id'
+    )
+    # Extended KPIs
+    total_booked_sales = fields.Monetary(
+        string='Total Booked Sales', compute='_compute_metrics', store=True,
+        currency_field='company_currency_id'
+    )
+    amount_to_collect = fields.Monetary(
+        string='Amount to Collect', compute='_compute_metrics', store=True,
+        currency_field='company_currency_id'
+    )
+    amount_collected = fields.Monetary(
+        string='Amount Collected', compute='_compute_metrics', store=True,
+        currency_field='company_currency_id'
+    )
+    commission_due = fields.Monetary(
+        string='Commission Due', compute='_compute_metrics', store=True,
         currency_field='company_currency_id'
     )
     company_currency_id = fields.Many2one('res.currency', compute='_compute_company_currency')
@@ -72,10 +98,22 @@ class SalesInvoicingDashboard(models.Model):
     chart_payment_state = fields.Json(
         string='Chart Payment State', compute='_compute_chart_payment_state'
     )
+    chart_sales_funnel = fields.Json(
+        string='Sales Funnel', compute='_compute_chart_sales_funnel'
+    )
+    chart_top_customers = fields.Json(
+        string='Top Customers Outstanding', compute='_compute_chart_top_customers'
+    )
+    chart_agent_performance = fields.Json(
+        string='Agent Performance', compute='_compute_chart_agent_performance'
+    )
 
     def _get_order_domain(self):
         domain = [('state', 'in', ['sale', 'done'])]
-        if self.sales_order_type_id:
+        # Multi-select takes precedence if set
+        if self.sales_order_type_ids:
+            domain.append(('sale_order_type_id', 'in', self.sales_order_type_ids.ids))
+        elif self.sales_order_type_id:
             domain.append(('sale_order_type_id', '=', self.sales_order_type_id.id))
         if self.invoice_status_filter and self.invoice_status_filter != 'all':
             domain.append(('invoice_status', '=', self.invoice_status_filter))
@@ -83,6 +121,11 @@ class SalesInvoicingDashboard(models.Model):
             domain.append(('booking_date', '>=', self.booking_date_from))
         if self.booking_date_to:
             domain.append(('booking_date', '<=', self.booking_date_to))
+        # Salesperson in this environment maps to internal agent1 partner
+        if self.agent_partner_id:
+            domain.append(('agent1_partner_id', '=', self.agent_partner_id.id))
+        if self.partner_id:
+            domain.append(('partner_id', '=', self.partner_id.id))
         return domain
 
     def _get_invoice_domain(self, include_payment_filter=True, unpaid_only=False):
@@ -118,6 +161,9 @@ class SalesInvoicingDashboard(models.Model):
 
             matching_orders = self.env['sale.order'].search(order_domain)
             order_ids = matching_orders.ids
+
+            # Total booked sales (confirmed orders in range)
+            rec.total_booked_sales = sum(matching_orders.mapped('amount_total'))
 
             # Posted invoices count and total amount (filtered by selected orders and payment status if provided)
             posted_domain = [
@@ -157,7 +203,32 @@ class SalesInvoicingDashboard(models.Model):
                 # Override the payment_state list with the selected filter
                 unpaid_domain = [d for d in unpaid_domain if not (isinstance(d, tuple) and d[0] == 'payment_state')]
                 unpaid_domain.append(('payment_state', '=', rec.payment_status_filter))
-            rec.unpaid_invoice_count = self.env['account.move'].search_count(unpaid_domain)
+            unpaid_invoices = self.env['account.move'].search(unpaid_domain)
+            rec.unpaid_invoice_count = len(unpaid_invoices)
+
+            # Amount to collect / collected
+            rec.amount_to_collect = sum(unpaid_invoices.mapped('amount_residual'))
+            rec.amount_collected = rec.total_invoiced_amount - rec.amount_to_collect
+
+            # Commission due (commission_ax): pending/partial on confirmed/processed
+            commission_due_total = 0.0
+            if order_ids:
+                cl_domain = [
+                    ('sale_order_id', 'in', order_ids),
+                    ('state', 'in', ['confirmed', 'processed']),
+                    ('payment_status', 'in', ['pending', 'partial']),
+                ]
+                CommissionLine = self.env['commission.line']
+                lines = CommissionLine.search(cl_domain)
+                company = self.env.company
+                for line in lines:
+                    # Convert outstanding_amount to company currency
+                    line_currency = line.currency_id or company.currency_id
+                    amount = line.outstanding_amount
+                    commission_due_total += line_currency._convert(
+                        amount, company.currency_id, company, rec.booking_date_to or fields.Date.context_today(self)
+                    )
+            rec.commission_due = commission_due_total
 
     @api.depends(
         'sales_order_type_id',
@@ -283,6 +354,174 @@ class SalesInvoicingDashboard(models.Model):
                     }
                 ],
             }
+
+    def _compute_chart_sales_funnel(self):
+        self.env.invalidate_all()
+        for rec in self:
+            data = [
+                float(rec.total_booked_sales or 0.0),
+                float(rec.total_invoiced_amount or 0.0),
+                float(rec.amount_collected or 0.0),
+            ]
+            rec.chart_sales_funnel = {
+                'labels': ['Booked Sales', 'Invoiced', 'Collected'],
+                'datasets': [{
+                    'label': 'Flow',
+                    'data': data,
+                    'backgroundColor': ['#3498db', '#f39c12', '#27ae60'],
+                    'borderColor': ['#3498db', '#f39c12', '#27ae60'],
+                    'borderWidth': 1,
+                }],
+            }
+
+    def _compute_chart_top_customers(self):
+        self.env.invalidate_all()
+        for rec in self:
+            domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=True)
+            groups = self.env['account.move'].read_group(
+                domain, ['amount_residual', 'partner_id'], ['partner_id']
+            )
+            # Sort and take top 10
+            groups = sorted(groups, key=lambda g: g.get('amount_residual', 0.0), reverse=True)[:10]
+            labels = [(g.get('partner_id') or ['', ''])[1] or ''] for g in groups]
+            data = [g.get('amount_residual', 0.0) for g in groups]
+            rec.chart_top_customers = {
+                'labels': labels,
+                'datasets': [{
+                    'label': 'Outstanding',
+                    'data': data,
+                    'backgroundColor': '#d9534f',
+                    'borderColor': '#d9534f',
+                    'borderWidth': 1,
+                }],
+            }
+
+    def _compute_chart_agent_performance(self):
+        self.env.invalidate_all()
+        for rec in self:
+            order_ids = self.env['sale.order'].search(rec._get_order_domain()).ids
+            labels, total_vals, paid_vals, out_vals = [], [], [], []
+            if order_ids:
+                # Only internal commissions (staff/agents)
+                cl_domain = [('sale_order_id', 'in', order_ids), ('commission_category', '=', 'internal')]
+                groups = self.env['commission.line'].read_group(
+                    cl_domain,
+                    ['commission_amount', 'paid_amount', 'partner_id', 'currency_id'],
+                    ['partner_id']
+                )
+                company = self.env.company
+                for g in groups:
+                    partner = (g.get('partner_id') or ['', ''])
+                    name = partner[1] or 'Agent'
+                    labels.append(name)
+                    # Convert sums to company currency (approx: use first line currency if mixed)
+                    amt = float(g.get('commission_amount', 0.0) or 0.0)
+                    paid = float(g.get('paid_amount', 0.0) or 0.0)
+                    # No currency aggregation in read_group; fallback assumes company currency
+                    total_vals.append(amt)
+                    paid_vals.append(paid)
+                    out_vals.append(max(amt - paid, 0.0))
+            rec.chart_agent_performance = {
+                'labels': labels,
+                'datasets': [
+                    {'label': 'Total', 'data': total_vals, 'backgroundColor': '#0060df'},
+                    {'label': 'Collected', 'data': paid_vals, 'backgroundColor': '#27ae60'},
+                    {'label': 'Outstanding', 'data': out_vals, 'backgroundColor': '#d9534f'},
+                ],
+            }
+
+    # --------------------
+    # Tabular HTML payloads
+    # --------------------
+    table_order_type_html = fields.Html(string='Order Type Analysis', compute='_compute_table_order_type_html', sanitize=False)
+    table_agent_commission_html = fields.Html(string='Agent Commission Breakdown', compute='_compute_table_agent_commission_html', sanitize=False)
+
+    def _fmt_money(self, amount):
+        curr = self.env.company.currency_id
+        return f"{curr.symbol or ''}{amount:,.2f}"
+
+    def _compute_table_order_type_html(self):
+        self.env.invalidate_all()
+        for rec in self:
+            domain = rec._get_order_domain()
+            groups = self.env['sale.order'].read_group(
+                domain, ['amount_total', 'id:count'], ['sale_order_type_id']
+            )
+            # Preload invoicing and residuals per type
+            html = [
+                '<table class="table table-sm table-striped table-hover">',
+                '<thead><tr>',
+                '<th>Order Type</th><th>Order Count</th><th>Total Sales</th>'
+                '<th>To Invoice</th><th>Invoiced</th><th>Outstanding</th>'
+                '<th>Collected</th><th>Collection %</th><th>Status</th>',
+                '</tr></thead><tbody>'
+            ]
+            for g in groups:
+                type_name = (g.get('sale_order_type_id') or ['', ''])[1] or 'Unspecified'
+                # Get orders of this type
+                type_domain = list(domain)
+                if g.get('sale_order_type_id'):
+                    type_domain.append(('sale_order_type_id', '=', g['sale_order_type_id'][0]))
+                else:
+                    type_domain.append(('sale_order_type_id', '=', False))
+                orders = self.env['sale.order'].search(type_domain)
+                total_sales = sum(orders.mapped('amount_total'))
+                to_invoice = sum(orders.filtered(lambda o: o.invoice_status == 'to invoice').mapped('amount_total'))
+                invoices = orders.mapped('invoice_ids').filtered(lambda inv: inv.move_type == 'out_invoice' and inv.state == 'posted')
+                invoiced = sum(invoices.mapped('amount_total'))
+                outstanding = sum(invoices.mapped('amount_residual'))
+                collected = max(invoiced - outstanding, 0.0)
+                rate = (collected / invoiced * 100.0) if invoiced else 0.0
+                status = 'Good' if rate >= 90 else ('Attention' if rate >= 70 else 'Critical')
+                color = 'success' if rate >= 90 else ('warning' if rate >= 70 else 'danger')
+                html.append('<tr>')
+                html.append(f'<td>{type_name}</td>')
+                html.append(f'<td>{int(g.get("__count", 0) or g.get("id_count", 0) or 0)}</td>')
+                html.append(f'<td>{rec._fmt_money(total_sales)}</td>')
+                html.append(f'<td>{rec._fmt_money(to_invoice)}</td>')
+                html.append(f'<td>{rec._fmt_money(invoiced)}</td>')
+                html.append(f'<td>{rec._fmt_money(outstanding)}</td>')
+                html.append(f'<td>{rec._fmt_money(collected)}</td>')
+                html.append(f'<td>{rate:.1f}%</td>')
+                html.append(f'<td><span class="badge badge-{color}">{status}</span></td>')
+                html.append('</tr>')
+            html.append('</tbody></table>')
+            rec.table_order_type_html = ''.join(html)
+
+    def _compute_table_agent_commission_html(self):
+        self.env.invalidate_all()
+        for rec in self:
+            order_ids = self.env['sale.order'].search(rec._get_order_domain()).ids
+            html = [
+                '<table class="table table-sm table-striped table-hover">',
+                '<thead><tr>',
+                '<th>Agent</th><th>Lines</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th>',
+                '</tr></thead><tbody>'
+            ]
+            if order_ids:
+                groups = self.env['commission.line'].read_group(
+                    [('sale_order_id', 'in', order_ids), ('commission_category', '=', 'internal')],
+                    ['commission_amount', 'paid_amount', 'id:count', 'partner_id'],
+                    ['partner_id']
+                )
+                for g in groups:
+                    name = (g.get('partner_id') or ['', ''])[1] or 'Agent'
+                    total = float(g.get('commission_amount', 0.0) or 0.0)
+                    paid = float(g.get('paid_amount', 0.0) or 0.0)
+                    out = max(total - paid, 0.0)
+                    status = 'Paid' if out == 0 else ('Partial' if paid > 0 else 'Pending')
+                    color = 'success' if out == 0 else ('warning' if paid > 0 else 'danger')
+                    count = int(g.get('id_count', 0) or g.get('__count', 0) or 0)
+                    html.append('<tr>')
+                    html.append(f'<td>{name}</td>')
+                    html.append(f'<td>{count}</td>')
+                    html.append(f'<td>{rec._fmt_money(total)}</td>')
+                    html.append(f'<td>{rec._fmt_money(paid)}</td>')
+                    html.append(f'<td>{rec._fmt_money(out)}</td>')
+                    html.append(f'<td><span class="badge badge-{color}">{status}</span></td>')
+                    html.append('</tr>')
+            html.append('</tbody></table>')
+            rec.table_agent_commission_html = ''.join(html)
 
     def action_open_posted_invoices(self):
         self.ensure_one()

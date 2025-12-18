@@ -37,35 +37,43 @@
                     <!-- Amount Summary Section -->
                     <group colspan="4" string="Amount Summary">
                         <group>
+                            <field name="total_booked_sales" widget="monetary"/>
                             <field name="total_invoiced_amount" widget="monetary"/>
+                            <field name="amount_collected" widget="monetary"/>
+                        </group>
+                        <group>
                             <field name="total_pending_amount" widget="monetary"/>
+                            <field name="amount_to_collect" widget="monetary"/>
+                            <field name="commission_due" widget="monetary"/>
                         </group>
                     </group>
 
                     <!-- Filters Section -->
                     <group string="Filters" colspan="2">
                         <group>
-                            <field name="sales_order_type_id" options="{'no_create': True}"/>
+                            <field name="sales_order_type_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             <field name="invoice_status_filter"/>
+                            <field name="agent_partner_id" options="{'no_create": True}"/>
                         </group>
                         <group>
                             <field name="booking_date_from"/>
                             <field name="booking_date_to"/>
                             <field name="payment_status_filter"/>
+                            <field name="partner_id" options="{'no_create': True}"/>
                         </group>
                     </group>
 
                     <!-- Visual Charts Section -->
                     <group string="Visual Charts" colspan="4">
-                        <!-- Sales by Type &amp; Payment State Row -->
+                        <!-- Sales Funnel &amp; Payment State Row -->
                         <group colspan="2">
                             <div class="o_row">
                                 <div class="o_col_6">
                                     <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Sales by Type</div>
-                                        <field name="chart_sales_by_type" widget="osus_dashboard_chart"
+                                        <div class="o_osus_chart_title">Sales → Invoice → Collection (Funnel)</div>
+                                        <field name="chart_sales_funnel" widget="osus_dashboard_chart"
                                             class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'bar', 'title': 'Sales by Type'}"/>
+                                            options="{'chartType': 'bar', 'title': 'Sales to Collection'}"/>
                                     </div>
                                 </div>
                                 <div class="o_col_6">
@@ -78,16 +86,59 @@
                                 </div>
                             </div>
                         </group>
-                        <!-- Booking Trend Row -->
+                        <!-- Sales by Type & Booking Trend Row -->
                         <group colspan="2">
-                            <div class="o_osus_chart_card">
-                                <div class="o_osus_chart_title">Booking Trend</div>
-                                <field name="chart_booking_trend" widget="osus_dashboard_chart"
-                                    class="o_osus_dashboard_chart"
-                                    options="{'chartType': 'line', 'title': 'Booking Trend'}"/>
+                            <div class="o_row">
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Sales by Type</div>
+                                        <field name="chart_sales_by_type" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'bar', 'title': 'Sales by Type'}"/>
+                                    </div>
+                                </div>
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Booking Trend</div>
+                                        <field name="chart_booking_trend" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'line', 'title': 'Booking Trend'}"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </group>
+                        <!-- Agent Performance & Top Customers Row -->
+                        <group colspan="2">
+                            <div class="o_row">
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Agent Performance</div>
+                                        <field name="chart_agent_performance" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'bar', 'title': 'Agent Performance'}"/>
+                                    </div>
+                                </div>
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Top Customers by Outstanding</div>
+                                        <field name="chart_top_customers" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'bar', 'title': 'Top Customers by Outstanding'}"/>
+                                    </div>
+                                </div>
                             </div>
                         </group>
                     </group>
+
+                    <!-- Data Tables -->
+                    <notebook>
+                        <page string="Order Type Analysis">
+                            <field name="table_order_type_html" widget="html"/>
+                        </page>
+                        <page string="Agent Commissions">
+                            <field name="table_agent_commission_html" widget="html"/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
@@ -163,6 +214,8 @@
         <field name="view_mode">form,kanban</field>
         <field name="view_id" ref="view_osus_sales_invoicing_dashboard_form"/>
         <field name="res_id" ref="osus_sales_invoicing_dashboard_record"/>
+        <!-- Open directly in edit mode so filters are immediately usable -->
+        <field name="context">{'form_view_initial_mode': 'edit', 'force_detailed_view': True}</field>
     </record>
 
     <!-- Menu under Sales module -->

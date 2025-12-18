@@ -113,8 +113,10 @@ Run these in your browser after deployment:
 - [ ] Numbers update in real-time when invoices change
 
 #### 3. Filters Functionality
-- [ ] Sales Order Type filter works
-- [ ] Booking Date From/To filters work
+- [ ] Sales Order Type filters (multi-select) work
+- [ ] Booking Date From/To filters (booking_date) work
+- [ ] Salesperson filter (`user_id`) works
+- [ ] Customer filter (`partner_id`) works
 - [ ] Invoice Status filter updates charts
 - [ ] Payment Status filter updates data
 - [ ] Filters combine correctly
@@ -123,6 +125,9 @@ Run these in your browser after deployment:
 - [ ] Sales by Type chart displays (bar chart)
 - [ ] Booking Trend chart displays (line chart)
 - [ ] Invoices by Payment State chart displays (doughnut chart)
+- [ ] Sales → Invoice → Collection funnel (bar) displays
+- [ ] Top Customers by Outstanding (bar) displays
+- [ ] Agent Performance (grouped bar) displays
 - [ ] Charts have proper styling and colors
 - [ ] Chart titles visible and formatted correctly
 
@@ -137,6 +142,11 @@ Run these in your browser after deployment:
 - [ ] "Orders to Invoice" button opens order list
 - [ ] "Unpaid Invoices" button opens unpaid invoices
 - [ ] Lists are filtered correctly per button clicked
+
+#### 7. Data Tables
+- [ ] Order Type Analysis table shows correct totals
+- [ ] Agent Commissions table shows internal staff totals
+- [ ] Status badges reflect collection state correctly
 
 #### 7. Responsive Design
 - [ ] Desktop (1920px): Full layout with 2-column charts
@@ -170,6 +180,27 @@ ssh -i ~/.ssh/id_ed25519_osus root@139.84.163.11 "tail -50 /var/odoo/osuspropert
 ssh -i ~/.ssh/id_ed25519_osus root@139.84.163.11 "ps aux | grep 'osusproperties' | grep -v grep"
 ```
 
+### Upgrade Module (Linux, service)
+```bash
+sudo -u odoo /usr/bin/odoo -d osusproperties -u osus_sales_invoicing_dashboard --stop-after-init
+```
+
+### Upgrade Module (Docker)
+```bash
+docker compose exec odoo odoo -d osusproperties -u osus_sales_invoicing_dashboard --stop-after-init
+```
+
+### Upgrade Module (Windows, venv)
+```powershell
+cd D:\odoo17
+venv\Scripts\python.exe odoo-bin -d osusproperties -u osus_sales_invoicing_dashboard --stop-after-init
+```
+
+### If dependency `commission_ax` is not installed
+```bash
+odoo -d osusproperties -i commission_ax,osus_sales_invoicing_dashboard --stop-after-init
+```
+
 ---
 
 ## 📊 Commits Deployed
@@ -198,7 +229,7 @@ ssh -i ~/.ssh/id_ed25519_osus root@139.84.163.11 "systemctl restart odoo && slee
 ### Issue: Slow dashboard loading
 **Solution:** Check database performance:
 ```bash
-ssh -i ~/.ssh/id_ed25519_osus root@139.84.163.11 "tail -100 /var/odoo/osusproperties/logs/odoo-server.log | grep -i 'warning\|error'"
+ssh -i ~/.ssh/id_ed25519_osus root@139.84.163.11 "tail -200 /var/odoo/osusproperties/logs/odoo-server.log | egrep -i 'slow|warning|error'"
 ```
 
 ---

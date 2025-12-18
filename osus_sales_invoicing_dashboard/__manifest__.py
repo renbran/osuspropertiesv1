@@ -12,7 +12,7 @@
     ),
     'author': 'OSUS Properties',
     'license': 'LGPL-3',
-    'depends': ['sale', 'account', 'le_sale_type', 'website'],
+    'depends': ['sale', 'account', 'le_sale_type', 'website', 'commission_ax'],
     'assets': {
         'web.assets_backend': [
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
