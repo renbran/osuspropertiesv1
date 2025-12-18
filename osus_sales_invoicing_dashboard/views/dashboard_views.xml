@@ -34,6 +34,14 @@
                         </button>
                     </div>
 
+                    <!-- Amount Summary Section -->
+                    <group colspan="4" string="Amount Summary">
+                        <group>
+                            <field name="total_invoiced_amount" widget="monetary"/>
+                            <field name="total_pending_amount" widget="monetary"/>
+                        </group>
+                    </group>
+
                     <!-- Filters Section -->
                     <group string="Filters" colspan="2">
                         <group>
