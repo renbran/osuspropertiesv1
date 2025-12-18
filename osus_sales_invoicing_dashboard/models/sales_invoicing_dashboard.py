@@ -208,8 +208,34 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _onchange_filters(self):
-        # Trigger recomputation when any filter changes
-        pass
+        """
+        Trigger recomputation of all computed fields when filters change.
+        This ensures dashboard KPIs, charts, and tables update in real-time.
+        """
+        # Invalidate cache to force recomputation of all dependent computed fields
+        self.invalidate_cache()
+        
+        # Explicitly access computed fields to force recalculation
+        # This ensures the form UI receives updated values immediately
+        _ = self.posted_invoice_count
+        _ = self.pending_to_invoice_order_count
+        _ = self.unpaid_invoice_count
+        _ = self.total_booked_sales
+        _ = self.total_invoiced_amount
+        _ = self.total_pending_amount
+        _ = self.amount_to_collect
+        _ = self.amount_collected
+        _ = self.commission_due
+        _ = self.chart_sales_by_type
+        _ = self.chart_booking_trend
+        _ = self.chart_payment_state
+        _ = self.chart_sales_funnel
+        _ = self.chart_top_customers
+        _ = self.chart_agent_performance
+        _ = self.table_order_type_html
+        _ = self.table_agent_commission_html
+        _ = self.table_detailed_orders_html
+        _ = self.table_invoice_aging_html
 
     @api.depends(
         'sales_order_type_id',

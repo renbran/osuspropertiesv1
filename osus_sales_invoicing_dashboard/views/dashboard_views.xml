@@ -28,7 +28,7 @@
                             <field name="invoice_status_filter" widget="radio" options="{'horizontal': true}"/>
                         </group>
                         <group>
-                            <field name="sales_order_type_ids" widget="many2many_tags" placeholder="All Order Types" options="{'no_create': True}"/>
+                            <field name="sales_order_type_ids" widget="many2many_tags" placeholder="All Order Types" options="{'no_create': True, 'color_field': false}"/>
                             <field name="agent_partner_id" string="Salesperson" placeholder="All Salespersons" options="{'no_create': True, 'no_open': True}" domain="[('is_company', '=', False)]"/>
                             <field name="partner_id" string="Customer" placeholder="All Customers" options="{'no_create': True, 'no_open': True}"/>
                             <field name="payment_status_filter" widget="radio" options="{'horizontal': true}"/>
