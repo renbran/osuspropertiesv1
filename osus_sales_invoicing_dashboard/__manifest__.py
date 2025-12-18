@@ -15,11 +15,9 @@
     'depends': ['sale', 'account', 'le_sale_type', 'website', 'commission_ax'],
     'assets': {
         'web.assets_backend': [
+            'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
             'osus_sales_invoicing_dashboard/static/src/scss/dashboard_charts.scss',
-        ],
-        'web.assets_qweb': [
-            'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
         ],
     },
     'data': [

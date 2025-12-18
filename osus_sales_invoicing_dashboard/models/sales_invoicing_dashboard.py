@@ -58,28 +58,28 @@ class SalesInvoicingDashboard(models.Model):
         string='Unpaid Invoices', compute='_compute_metrics', store=False
     )
     total_invoiced_amount = fields.Monetary(
-        string='Total Invoiced Amount', compute='_compute_metrics', store=True,
+        string='Total Invoiced Amount', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     total_pending_amount = fields.Monetary(
-        string='Total Pending to Invoice', compute='_compute_metrics', store=True,
+        string='Total Pending to Invoice', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     # Extended KPIs
     total_booked_sales = fields.Monetary(
-        string='Total Booked Sales', compute='_compute_metrics', store=True,
+        string='Total Booked Sales', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     amount_to_collect = fields.Monetary(
-        string='Amount to Collect', compute='_compute_metrics', store=True,
+        string='Amount to Collect', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     amount_collected = fields.Monetary(
-        string='Amount Collected', compute='_compute_metrics', store=True,
+        string='Amount Collected', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     commission_due = fields.Monetary(
-        string='Commission Due', compute='_compute_metrics', store=True,
+        string='Commission Due', compute='_compute_metrics', store=False,
         currency_field='company_currency_id'
     )
     company_currency_id = fields.Many2one(
@@ -155,10 +155,13 @@ class SalesInvoicingDashboard(models.Model):
 
     @api.depends(
         'sales_order_type_id',
+        'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
         'invoice_status_filter',
         'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
     )
     def _compute_metrics(self):
         # Invalidate cache to ensure fresh data from DB on every computation
@@ -319,10 +322,13 @@ class SalesInvoicingDashboard(models.Model):
 
     @api.depends(
         'sales_order_type_id',
+        'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
         'invoice_status_filter',
         'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
     )
     def _compute_chart_payment_state(self):
         self.env.invalidate_all()
