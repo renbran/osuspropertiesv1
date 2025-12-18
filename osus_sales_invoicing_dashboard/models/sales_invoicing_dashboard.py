@@ -87,11 +87,6 @@ class SalesInvoicingDashboard(models.Model):
     chart_sales_by_type = fields.Json(
         string='Chart Sales by Type', compute='_compute_chart_sales_by_type'
     )
-
-    def _compute_company_currency(self):
-        """Get company currency for monetary fields"""
-        for rec in self:
-            rec.company_currency_id = self.env.company.currency_id
     chart_booking_trend = fields.Json(
         string='Chart Booking Trend', compute='_compute_chart_booking_trend'
     )
@@ -107,6 +102,17 @@ class SalesInvoicingDashboard(models.Model):
     chart_agent_performance = fields.Json(
         string='Agent Performance', compute='_compute_chart_agent_performance'
     )
+
+    # Tabular data (HTML renders)
+    table_order_type_html = fields.Html(string='Order Type Analysis', compute='_compute_table_order_type_html', sanitize=False)
+    table_agent_commission_html = fields.Html(string='Agent Commission Breakdown', compute='_compute_table_agent_commission_html', sanitize=False)
+    table_detailed_orders_html = fields.Html(string='Detailed Orders', compute='_compute_table_detailed_orders_html', sanitize=False)
+    table_invoice_aging_html = fields.Html(string='Invoice Aging', compute='_compute_table_invoice_aging_html', sanitize=False)
+
+    def _compute_company_currency(self):
+        """Get company currency for monetary fields"""
+        for rec in self:
+            rec.company_currency_id = self.env.company.currency_id
 
     def _get_order_domain(self):
         domain = [('state', 'in', ['sale', 'done'])]
@@ -431,10 +437,44 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     # --------------------
-    # Tabular HTML payloads
+    # Helper dataset builders
     # --------------------
-    table_order_type_html = fields.Html(string='Order Type Analysis', compute='_compute_table_order_type_html', sanitize=False)
-    table_agent_commission_html = fields.Html(string='Agent Commission Breakdown', compute='_compute_table_agent_commission_html', sanitize=False)
+    def _get_order_type_rows(self):
+        domain = self._get_order_domain()
+        groups = self.env['sale.order'].read_group(
+            domain, ['amount_total', 'id:count'], ['sale_order_type_id']
+        )
+        rows = []
+        for g in groups:
+            type_name = (g.get('sale_order_type_id') or ['', ''])[1] or 'Unspecified'
+            type_domain = list(domain)
+            if g.get('sale_order_type_id'):
+                type_domain.append(('sale_order_type_id', '=', g['sale_order_type_id'][0]))
+            else:
+                type_domain.append(('sale_order_type_id', '=', False))
+            orders = self.env['sale.order'].search(type_domain)
+            total_sales = sum(orders.mapped('amount_total'))
+            to_invoice = sum(orders.filtered(lambda o: o.invoice_status == 'to invoice').mapped('amount_total'))
+            invoices = orders.mapped('invoice_ids').filtered(lambda inv: inv.move_type == 'out_invoice' and inv.state == 'posted')
+            invoiced = sum(invoices.mapped('amount_total'))
+            outstanding = sum(invoices.mapped('amount_residual'))
+            collected = max(invoiced - outstanding, 0.0)
+            rate = (collected / invoiced * 100.0) if invoiced else 0.0
+            status = 'Good' if rate >= 90 else ('Attention' if rate >= 70 else 'Critical')
+            color = 'success' if rate >= 90 else ('warning' if rate >= 70 else 'danger')
+            rows.append({
+                'name': type_name,
+                'count': len(orders),
+                'total_sales': total_sales,
+                'to_invoice': to_invoice,
+                'invoiced': invoiced,
+                'outstanding': outstanding,
+                'collected': collected,
+                'rate': rate,
+                'status': status,
+                'status_color': color,
+            })
+        return rows
 
     def _fmt_money(self, amount):
         curr = self.env.company.currency_id
@@ -443,11 +483,7 @@ class SalesInvoicingDashboard(models.Model):
     def _compute_table_order_type_html(self):
         self.env.invalidate_all()
         for rec in self:
-            domain = rec._get_order_domain()
-            groups = self.env['sale.order'].read_group(
-                domain, ['amount_total', 'id:count'], ['sale_order_type_id']
-            )
-            # Preload invoicing and residuals per type
+            rows = rec._get_order_type_rows()
             html = [
                 '<table class="table table-sm table-striped table-hover">',
                 '<thead><tr>',
@@ -456,36 +492,48 @@ class SalesInvoicingDashboard(models.Model):
                 '<th>Collected</th><th>Collection %</th><th>Status</th>',
                 '</tr></thead><tbody>'
             ]
-            for g in groups:
-                type_name = (g.get('sale_order_type_id') or ['', ''])[1] or 'Unspecified'
-                # Get orders of this type
-                type_domain = list(domain)
-                if g.get('sale_order_type_id'):
-                    type_domain.append(('sale_order_type_id', '=', g['sale_order_type_id'][0]))
-                else:
-                    type_domain.append(('sale_order_type_id', '=', False))
-                orders = self.env['sale.order'].search(type_domain)
-                total_sales = sum(orders.mapped('amount_total'))
-                to_invoice = sum(orders.filtered(lambda o: o.invoice_status == 'to invoice').mapped('amount_total'))
-                invoices = orders.mapped('invoice_ids').filtered(lambda inv: inv.move_type == 'out_invoice' and inv.state == 'posted')
-                invoiced = sum(invoices.mapped('amount_total'))
-                outstanding = sum(invoices.mapped('amount_residual'))
-                collected = max(invoiced - outstanding, 0.0)
-                rate = (collected / invoiced * 100.0) if invoiced else 0.0
-                status = 'Good' if rate >= 90 else ('Attention' if rate >= 70 else 'Critical')
-                color = 'success' if rate >= 90 else ('warning' if rate >= 70 else 'danger')
+            # accumulate totals
+            tot_count = 0
+            tot_sales = 0.0
+            tot_to_inv = 0.0
+            tot_inv = 0.0
+            tot_out = 0.0
+            tot_coll = 0.0
+            for r in rows:
                 html.append('<tr>')
-                html.append(f'<td>{type_name}</td>')
-                html.append(f'<td>{int(g.get("__count", 0) or g.get("id_count", 0) or 0)}</td>')
-                html.append(f'<td>{rec._fmt_money(total_sales)}</td>')
-                html.append(f'<td>{rec._fmt_money(to_invoice)}</td>')
-                html.append(f'<td>{rec._fmt_money(invoiced)}</td>')
-                html.append(f'<td>{rec._fmt_money(outstanding)}</td>')
-                html.append(f'<td>{rec._fmt_money(collected)}</td>')
-                html.append(f'<td>{rate:.1f}%</td>')
-                html.append(f'<td><span class="badge badge-{color}">{status}</span></td>')
+                html.append(f'<td>{r["name"]}</td>')
+                html.append(f'<td>{r["count"]}</td>')
+                html.append(f'<td>{rec._fmt_money(r["total_sales"])}</td>')
+                html.append(f'<td>{rec._fmt_money(r["to_invoice"])}</td>')
+                html.append(f'<td>{rec._fmt_money(r["invoiced"])}</td>')
+                html.append(f'<td>{rec._fmt_money(r["outstanding"])}</td>')
+                html.append(f'<td>{rec._fmt_money(r["collected"])}</td>')
+                html.append(f'<td>{r["rate"]:.1f}%</td>')
+                html.append(f'<td><span class="badge badge-{r["status_color"]}">{r["status"]}</span></td>')
                 html.append('</tr>')
+                tot_count += int(r['count'] or 0)
+                tot_sales += float(r['total_sales'] or 0.0)
+                tot_to_inv += float(r['to_invoice'] or 0.0)
+                tot_inv += float(r['invoiced'] or 0.0)
+                tot_out += float(r['outstanding'] or 0.0)
+                tot_coll += float(r['collected'] or 0.0)
             html.append('</tbody></table>')
+            # add totals footer
+            total_rate = (tot_coll / tot_inv * 100.0) if tot_inv else 0.0
+            footer = [
+                '<tfoot><tr>',
+                '<th>Total</th>',
+                f'<th>{tot_count}</th>',
+                f'<th>{rec._fmt_money(tot_sales)}</th>',
+                f'<th>{rec._fmt_money(tot_to_inv)}</th>',
+                f'<th>{rec._fmt_money(tot_inv)}</th>',
+                f'<th>{rec._fmt_money(tot_out)}</th>',
+                f'<th>{rec._fmt_money(tot_coll)}</th>',
+                f'<th>{total_rate:.1f}%</th>',
+                '<th>-</th>',
+                '</tr></tfoot>'
+            ]
+            html.insert(2, ''.join(footer))  # insert footer after thead for visibility
             rec.table_order_type_html = ''.join(html)
 
     def _compute_table_agent_commission_html(self):
@@ -498,6 +546,10 @@ class SalesInvoicingDashboard(models.Model):
                 '<th>Agent</th><th>Lines</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th>',
                 '</tr></thead><tbody>'
             ]
+            total_lines = 0
+            total_amount = 0.0
+            total_paid = 0.0
+            total_outstanding = 0.0
             if order_ids:
                 groups = self.env['commission.line'].read_group(
                     [('sale_order_id', 'in', order_ids), ('commission_category', '=', 'internal')],
@@ -520,8 +572,178 @@ class SalesInvoicingDashboard(models.Model):
                     html.append(f'<td>{rec._fmt_money(out)}</td>')
                     html.append(f'<td><span class="badge badge-{color}">{status}</span></td>')
                     html.append('</tr>')
+                    total_lines += count
+                    total_amount += total
+                    total_paid += paid
+                    total_outstanding += out
             html.append('</tbody></table>')
+            footer = [
+                '<tfoot><tr>',
+                '<th>Total</th>',
+                f'<th>{total_lines}</th>',
+                f'<th>{rec._fmt_money(total_amount)}</th>',
+                f'<th>{rec._fmt_money(total_paid)}</th>',
+                f'<th>{rec._fmt_money(total_outstanding)}</th>',
+                '<th>-</th>',
+                '</tr></tfoot>'
+            ]
+            html.insert(2, ''.join(footer))
             rec.table_agent_commission_html = ''.join(html)
+
+    def _compute_table_detailed_orders_html(self):
+        self.env.invalidate_all()
+        today = fields.Date.context_today(self)
+        for rec in self:
+            orders = self.env['sale.order'].search(rec._get_order_domain(), order='booking_date desc, id desc', limit=50)
+            html = [
+                '<table class="table table-sm table-striped table-hover">',
+                '<thead><tr>',
+                '<th>Order</th><th>Booking Date</th><th>Type</th><th>Customer</th><th>Salesperson</th>'
+                '<th>Status</th><th>Amount</th><th>Invoiced</th><th>Outstanding</th>'
+                '<th>Invoice Status</th><th>Payment Status</th><th>Days Since</th><th>Action Required</th>',
+                '</tr></thead><tbody>'
+            ]
+            tot_orders = 0
+            tot_amount = 0.0
+            tot_invoiced = 0.0
+            tot_outstanding = 0.0
+            for o in orders:
+                invs = o.invoice_ids.filtered(lambda inv: inv.move_type == 'out_invoice' and inv.state == 'posted')
+                invoiced = sum(invs.mapped('amount_total'))
+                outstanding = sum(invs.mapped('amount_residual'))
+                # payment status heuristic
+                if invoiced and outstanding == 0:
+                    pay_status = 'Paid'
+                elif invoiced and outstanding > 0:
+                    # overdue check
+                    overdue = any([inv.invoice_date_due and inv.invoice_date_due < today and (inv.amount_residual or 0) > 0 for inv in invs])
+                    pay_status = 'Overdue' if overdue else 'Pending'
+                else:
+                    pay_status = '-'
+                days_since = (today - (o.booking_date or today)).days if o.booking_date else 0
+                if o.invoice_status == 'to invoice':
+                    action = 'Invoice Pending'
+                elif invoiced and outstanding > 0:
+                    action = 'Payment Overdue' if 'Overdue' in pay_status else 'Payment Pending'
+                else:
+                    action = '-'
+                html.append('<tr>')
+                html.append(f'<td>{o.name}</td>')
+                html.append(f'<td>{o.booking_date or ""}</td>')
+                html.append(f'<td>{o.sale_order_type_id.name or ""}</td>')
+                html.append(f'<td>{o.partner_id.name or ""}</td>')
+                html.append(f'<td>{getattr(o, "agent1_partner_id").name if hasattr(o, "agent1_partner_id") and o.agent1_partner_id else ""}</td>')
+                html.append(f'<td>{o.state}</td>')
+                html.append(f'<td>{rec._fmt_money(o.amount_total)}</td>')
+                html.append(f'<td>{rec._fmt_money(invoiced)}</td>')
+                html.append(f'<td>{rec._fmt_money(outstanding)}</td>')
+                html.append(f'<td>{o.invoice_status}</td>')
+                html.append(f'<td>{pay_status}</td>')
+                html.append(f'<td>{days_since}</td>')
+                html.append(f'<td>{action}</td>')
+                html.append('</tr>')
+                tot_orders += 1
+                tot_amount += float(o.amount_total or 0.0)
+                tot_invoiced += float(invoiced or 0.0)
+                tot_outstanding += float(outstanding or 0.0)
+            html.append('</tbody></table>')
+            footer = [
+                '<tfoot><tr>',
+                '<th>Total</th>',
+                f'<th>{tot_orders}</th>',
+                '<th></th><th></th><th></th>',
+                '<th></th>',
+                f'<th>{rec._fmt_money(tot_amount)}</th>',
+                f'<th>{rec._fmt_money(tot_invoiced)}</th>',
+                f'<th>{rec._fmt_money(tot_outstanding)}</th>',
+                '<th></th><th></th><th></th><th></th>',
+                '</tr></tfoot>'
+            ]
+            html.insert(2, ''.join(footer))
+            rec.table_detailed_orders_html = ''.join(html)
+
+    def _compute_table_invoice_aging_html(self):
+        self.env.invalidate_all()
+        today = fields.Date.context_today(self)
+        for rec in self:
+            domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=True)
+            invs = self.env['account.move'].search(domain)
+            buckets = {
+                'current': {'label': 'Current (Not Due)', 'count': 0, 'amount': 0.0},
+                '1_30': {'label': '1-30 Days', 'count': 0, 'amount': 0.0},
+                '31_60': {'label': '31-60 Days', 'count': 0, 'amount': 0.0},
+                '61_90': {'label': '61-90 Days', 'count': 0, 'amount': 0.0},
+                '90_plus': {'label': '90+ Days Overdue', 'count': 0, 'amount': 0.0},
+            }
+            total_amt = 0.0
+            total_count = 0
+            for inv in invs:
+                amt = inv.amount_residual or 0.0
+                total_amt += amt
+                due = inv.invoice_date_due
+                if not due or due >= today:
+                    key = 'current'
+                else:
+                    delta = (today - due).days
+                    if delta <= 30:
+                        key = '1_30'
+                    elif delta <= 60:
+                        key = '31_60'
+                    elif delta <= 90:
+                        key = '61_90'
+                    else:
+                        key = '90_plus'
+                buckets[key]['count'] += 1
+                buckets[key]['amount'] += amt
+                total_count += 1
+
+            html = [
+                '<table class="table table-sm table-striped table-hover">',
+                '<thead><tr><th>Aging Bucket</th><th>Count</th><th>Amount</th><th>% of Total</th></tr></thead><tbody>'
+            ]
+            for key in ['current','1_30','31_60','61_90','90_plus']:
+                b = buckets[key]
+                pct = (b['amount'] / total_amt * 100.0) if total_amt else 0.0
+                html.append('<tr>')
+                html.append(f'<td>{b["label"]}</td>')
+                html.append(f'<td>{b["count"]}</td>')
+                html.append(f'<td>{rec._fmt_money(b["amount"])}</td>')
+                html.append(f'<td>{pct:.1f}%</td>')
+                html.append('</tr>')
+            html.append('</tbody></table>')
+            footer = [
+                '<tfoot><tr>',
+                '<th>Total</th>',
+                f'<th>{total_count}</th>',
+                f'<th>{rec._fmt_money(total_amt)}</th>',
+                '<th>100.0%</th>',
+                '</tr></tfoot>'
+            ]
+            html.insert(2, ''.join(footer))
+            rec.table_invoice_aging_html = ''.join(html)
+
+    # --------------------
+    # Export helpers (act_url)
+    # --------------------
+    def _export_url(self, endpoint):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f"/osus_dashboard/export/{endpoint}?rec_id={self.id}",
+            'target': 'self',
+        }
+
+    def action_export_order_types_csv(self):
+        return self._export_url('order_types')
+
+    def action_export_agent_commissions_csv(self):
+        return self._export_url('agent_commissions')
+
+    def action_export_detailed_orders_csv(self):
+        return self._export_url('detailed_orders')
+
+    def action_export_invoice_aging_csv(self):
+        return self._export_url('invoice_aging')
 
     def action_open_posted_invoices(self):
         self.ensure_one()

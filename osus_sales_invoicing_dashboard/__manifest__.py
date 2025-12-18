@@ -17,10 +17,7 @@
         'web.assets_backend': [
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
             'osus_sales_invoicing_dashboard/static/src/scss/dashboard_charts.scss',
-            # Ensure the QWeb template is available in backend bundle (fixes missing template error)
-            'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
         ],
-        # Keep also in qweb bundle for completeness; harmless duplication in v17 asset pipeline
         'web.assets_qweb': [
             'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
         ],

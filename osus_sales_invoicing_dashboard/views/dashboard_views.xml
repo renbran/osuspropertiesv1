@@ -8,93 +8,59 @@
         <field name="name">osus.sales.invoicing.dashboard.form</field>
         <field name="model">osus.sales.invoicing.dashboard</field>
         <field name="arch" type="xml">
-            <form string="Sales &amp; Invoicing Dashboard">
+            <form string="Sales &amp; Invoicing Dashboard" create="false" delete="false">
+                <header>
+                    <button class="oe_edit_button" string="Edit Filters"/>
+                    <button class="oe_save_button oe_highlight" string="Save"/>
+                    <button class="oe_cancel_button" string="Discard"/>
+                    <button name="%(action_osus_sales_invoicing_dashboard)d" string="Refresh Data" type="action" class="oe_highlight"/>
+                </header>
                 <sheet>
-                    <!-- Dashboard Title -->
                     <div class="oe_title">
                         <h1>Sales &amp; Invoicing Dashboard</h1>
                     </div>
-
-                    <!-- KPI Stat Buttons -->
-                    <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_posted_invoices"
-                                string="Posted Invoices">
-                            <field name="posted_invoice_count" widget="statinfo"/>
-                        </button>
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_pending_orders"
-                                string="Orders to Invoice">
-                            <field name="pending_to_invoice_order_count" widget="statinfo"/>
-                        </button>
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_unpaid_invoices"
-                                string="Unpaid Invoices">
-                            <field name="unpaid_invoice_count" widget="statinfo"/>
-                        </button>
-                    </div>
-
-                    <!-- Amount Summary Section -->
-                    <group colspan="4" string="Amount Summary">
-                        <group>
-                            <field name="total_booked_sales" widget="monetary"/>
-                            <field name="total_invoiced_amount" widget="monetary"/>
-                            <field name="amount_collected" widget="monetary"/>
-                        </group>
-                        <group>
-                            <field name="total_pending_amount" widget="monetary"/>
-                            <field name="amount_to_collect" widget="monetary"/>
-                            <field name="commission_due" widget="monetary"/>
-                        </group>
-                    </group>
-
-                    <!-- Filters Section -->
-                    <group string="Filters" colspan="2">
-                        <group>
-                            <field name="sales_order_type_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="invoice_status_filter"/>
-                            <field name="agent_partner_id" options="{'no_create": True}"/>
-                        </group>
-                        <group>
+                    
+                    <group>
+                        <!-- Filters -->
+                        <group string="Date Range">
                             <field name="booking_date_from"/>
                             <field name="booking_date_to"/>
-                            <field name="payment_status_filter"/>
-                            <field name="partner_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Filters">
+                            <field name="sales_order_type_ids" widget="many2many_tags" placeholder="All Order Types" options="{'no_create': True}"/>
+                            <field name="agent_partner_id" string="Salesperson" placeholder="All Salespersons" options="{'no_create': True}"/>
+                            <field name="partner_id" string="Customer" placeholder="All Customers" options="{'no_create': True}"/>
                         </group>
                     </group>
 
-                    <!-- Visual Charts Section -->
-                    <group string="Visual Charts" colspan="4">
-                        <!-- Sales Funnel &amp; Payment State Row -->
+                    <separator/>
+                    
+                    <!-- Key Metrics -->
+                    <group string="Financial Summary">
+                        <group>
+                            <field name="total_booked_sales" widget="monetary" readonly="1" string="Total Booked Sales"/>
+                            <field name="total_pending_amount" widget="monetary" readonly="1" string="To Invoice"/>
+                            <field name="total_invoiced_amount" widget="monetary" readonly="1" string="Total Invoiced"/>
+                        </group>
+                        <group>
+                            <field name="amount_to_collect" widget="monetary" readonly="1" string="Outstanding"/>
+                            <field name="amount_collected" widget="monetary" readonly="1" string="Collected"/>
+                            <field name="commission_due" widget="monetary" readonly="1" string="Commission Due"/>
+                        </group>
+                    </group>
+
+                    <separator/>
+
+                    <!-- Strategic Visuals -->
+                    <group string="Visual Insights" colspan="4">
                         <group colspan="2">
                             <div class="o_row">
                                 <div class="o_col_6">
                                     <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Sales → Invoice → Collection (Funnel)</div>
+                                        <div class="o_osus_chart_title">Sales → Invoice → Collection</div>
                                         <field name="chart_sales_funnel" widget="osus_dashboard_chart"
                                             class="o_osus_dashboard_chart"
                                             options="{'chartType': 'bar', 'title': 'Sales to Collection'}"/>
-                                    </div>
-                                </div>
-                                <div class="o_col_6">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Invoices by Payment State</div>
-                                        <field name="chart_payment_state" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'doughnut', 'title': 'Invoices by Payment State'}"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </group>
-                        <!-- Sales by Type & Booking Trend Row -->
-                        <group colspan="2">
-                            <div class="o_row">
-                                <div class="o_col_6">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Sales by Type</div>
-                                        <field name="chart_sales_by_type" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'bar', 'title': 'Sales by Type'}"/>
                                     </div>
                                 </div>
                                 <div class="o_col_6">
@@ -107,18 +73,9 @@
                                 </div>
                             </div>
                         </group>
-                        <!-- Agent Performance & Top Customers Row -->
                         <group colspan="2">
                             <div class="o_row">
-                                <div class="o_col_6">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Agent Performance</div>
-                                        <field name="chart_agent_performance" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'bar', 'title': 'Agent Performance'}"/>
-                                    </div>
-                                </div>
-                                <div class="o_col_6">
+                                <div class="o_col_12">
                                     <div class="o_osus_chart_card">
                                         <div class="o_osus_chart_title">Top Customers by Outstanding</div>
                                         <field name="chart_top_customers" widget="osus_dashboard_chart"
@@ -138,7 +95,25 @@
                         <page string="Agent Commissions">
                             <field name="table_agent_commission_html" widget="html"/>
                         </page>
+                        <page string="Detailed Orders">
+                            <field name="table_detailed_orders_html" widget="html"/>
+                        </page>
+                        <page string="Invoice Aging">
+                            <field name="table_invoice_aging_html" widget="html"/>
+                        </page>
                     </notebook>
+
+                    <!-- Exports -->
+                    <group string="Exports">
+                        <button type="object" name="action_export_order_types_csv"
+                                class="btn-secondary" string="Export Order Types (CSV)"/>
+                        <button type="object" name="action_export_agent_commissions_csv"
+                                class="btn-secondary" string="Export Agent Commissions (CSV)"/>
+                        <button type="object" name="action_export_detailed_orders_csv"
+                                class="btn-secondary" string="Export Detailed Orders (CSV)"/>
+                        <button type="object" name="action_export_invoice_aging_csv"
+                                class="btn-secondary" string="Export Invoice Aging (CSV)"/>
+                    </group>
                 </sheet>
             </form>
         </field>
