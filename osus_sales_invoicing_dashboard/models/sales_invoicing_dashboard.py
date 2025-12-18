@@ -383,7 +383,7 @@ class SalesInvoicingDashboard(models.Model):
             )
             # Sort and take top 10
             groups = sorted(groups, key=lambda g: g.get('amount_residual', 0.0), reverse=True)[:10]
-            labels = [(g.get('partner_id') or ['', ''])[1] or ''] for g in groups]
+            labels = [((g.get('partner_id') or ['', ''])[1] or '') for g in groups]
             data = [g.get('amount_residual', 0.0) for g in groups]
             rec.chart_top_customers = {
                 'labels': labels,
