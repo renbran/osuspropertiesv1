@@ -10,9 +10,6 @@
         <field name="arch" type="xml">
             <form string="Sales &amp; Invoicing Dashboard" create="false" delete="false">
                 <header>
-                    <button class="oe_edit_button" string="Edit Filters"/>
-                    <button class="oe_save_button oe_highlight" string="Save"/>
-                    <button class="oe_cancel_button" string="Discard"/>
                     <button name="%(action_osus_sales_invoicing_dashboard)d" string="Refresh Data" type="action" class="oe_highlight"/>
                 </header>
                 <sheet>
@@ -38,82 +35,88 @@
                     <!-- Key Metrics -->
                     <group string="Financial Summary">
                         <group>
-                            <field name="total_booked_sales" widget="monetary" readonly="1" string="Total Booked Sales"/>
-                            <field name="total_pending_amount" widget="monetary" readonly="1" string="To Invoice"/>
-                            <field name="total_invoiced_amount" widget="monetary" readonly="1" string="Total Invoiced"/>
+                            <field name="total_booked_sales" widget="monetary" readonly="1"/>
+                            <field name="total_pending_amount" widget="monetary" readonly="1"/>
+                            <field name="total_invoiced_amount" widget="monetary" readonly="1"/>
                         </group>
                         <group>
-                            <field name="amount_to_collect" widget="monetary" readonly="1" string="Outstanding"/>
-                            <field name="amount_collected" widget="monetary" readonly="1" string="Collected"/>
-                            <field name="commission_due" widget="monetary" readonly="1" string="Commission Due"/>
+                            <field name="amount_to_collect" widget="monetary" readonly="1"/>
+                            <field name="amount_collected" widget="monetary" readonly="1"/>
+                            <field name="commission_due" widget="monetary" readonly="1"/>
                         </group>
                     </group>
 
-                    <separator/>
+                    <separator string="Visual Insights"/>
 
                     <!-- Strategic Visuals -->
-                    <group string="Visual Insights" colspan="4">
-                        <group colspan="2">
-                            <div class="o_row">
-                                <div class="o_col_6">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Sales → Invoice → Collection</div>
-                                        <field name="chart_sales_funnel" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'bar', 'title': 'Sales to Collection'}"/>
-                                    </div>
-                                </div>
-                                <div class="o_col_6">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Booking Trend</div>
-                                        <field name="chart_booking_trend" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'line', 'title': 'Booking Trend'}"/>
-                                    </div>
-                                </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="o_osus_chart_card">
+                                <div class="o_osus_chart_title">Sales → Invoice → Collection</div>
+                                <field name="chart_sales_funnel" widget="osus_dashboard_chart"
+                                    nolabel="1"
+                                    options="{'chartType': 'bar', 'title': 'Sales to Collection'}"/>
                             </div>
-                        </group>
-                        <group colspan="2">
-                            <div class="o_row">
-                                <div class="o_col_12">
-                                    <div class="o_osus_chart_card">
-                                        <div class="o_osus_chart_title">Top Customers by Outstanding</div>
-                                        <field name="chart_top_customers" widget="osus_dashboard_chart"
-                                            class="o_osus_dashboard_chart"
-                                            options="{'chartType': 'bar', 'title': 'Top Customers by Outstanding'}"/>
-                                    </div>
-                                </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="o_osus_chart_card">
+                                <div class="o_osus_chart_title">Booking Trend</div>
+                                <field name="chart_booking_trend" widget="osus_dashboard_chart"
+                                    nolabel="1"
+                                    options="{'chartType': 'line', 'title': 'Booking Trend'}"/>
                             </div>
-                        </group>
-                    </group>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="o_osus_chart_card">
+                                <div class="o_osus_chart_title">Top Customers by Outstanding</div>
+                                <field name="chart_top_customers" widget="osus_dashboard_chart"
+                                    nolabel="1"
+                                    options="{'chartType': 'bar', 'title': 'Top Customers by Outstanding'}"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <separator string="Detailed Analysis"/>
 
                     <!-- Data Tables -->
                     <notebook>
                         <page string="Order Type Analysis">
-                            <field name="table_order_type_html" widget="html"/>
+                            <field name="table_order_type_html" widget="html" nolabel="1"/>
                         </page>
                         <page string="Agent Commissions">
-                            <field name="table_agent_commission_html" widget="html"/>
+                            <field name="table_agent_commission_html" widget="html" nolabel="1"/>
                         </page>
                         <page string="Detailed Orders">
-                            <field name="table_detailed_orders_html" widget="html"/>
+                            <field name="table_detailed_orders_html" widget="html" nolabel="1"/>
                         </page>
                         <page string="Invoice Aging">
-                            <field name="table_invoice_aging_html" widget="html"/>
+                            <field name="table_invoice_aging_html" widget="html" nolabel="1"/>
                         </page>
                     </notebook>
 
+                    <separator string="Export Data"/>
+
                     <!-- Exports -->
-                    <group string="Exports">
-                        <button type="object" name="action_export_order_types_csv"
-                                class="btn-secondary" string="Export Order Types (CSV)"/>
-                        <button type="object" name="action_export_agent_commissions_csv"
-                                class="btn-secondary" string="Export Agent Commissions (CSV)"/>
-                        <button type="object" name="action_export_detailed_orders_csv"
-                                class="btn-secondary" string="Export Detailed Orders (CSV)"/>
-                        <button type="object" name="action_export_invoice_aging_csv"
-                                class="btn-secondary" string="Export Invoice Aging (CSV)"/>
-                    </group>
+                    <div class="row">
+                        <div class="col-3">
+                            <button type="object" name="action_export_order_types_csv"
+                                    class="btn-secondary btn-block" string="Export Order Types (CSV)"/>
+                        </div>
+                        <div class="col-3">
+                            <button type="object" name="action_export_agent_commissions_csv"
+                                    class="btn-secondary btn-block" string="Export Agent Commissions (CSV)"/>
+                        </div>
+                        <div class="col-3">
+                            <button type="object" name="action_export_detailed_orders_csv"
+                                    class="btn-secondary btn-block" string="Export Detailed Orders (CSV)"/>
+                        </div>
+                        <div class="col-3">
+                            <button type="object" name="action_export_invoice_aging_csv"
+                                    class="btn-secondary btn-block" string="Export Invoice Aging (CSV)"/>
+                        </div>
+                    </div>
                 </sheet>
             </form>
         </field>

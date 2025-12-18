@@ -82,7 +82,13 @@ class SalesInvoicingDashboard(models.Model):
         string='Commission Due', compute='_compute_metrics', store=True,
         currency_field='company_currency_id'
     )
-    company_currency_id = fields.Many2one('res.currency', compute='_compute_company_currency')
+    company_currency_id = fields.Many2one(
+        'res.currency', 
+        string='Currency',
+        required=True,
+        readonly=True,
+        default=lambda self: self.env.company.currency_id
+    )
 
     chart_sales_by_type = fields.Json(
         string='Chart Sales by Type', compute='_compute_chart_sales_by_type'
@@ -108,11 +114,6 @@ class SalesInvoicingDashboard(models.Model):
     table_agent_commission_html = fields.Html(string='Agent Commission Breakdown', compute='_compute_table_agent_commission_html', sanitize=False)
     table_detailed_orders_html = fields.Html(string='Detailed Orders', compute='_compute_table_detailed_orders_html', sanitize=False)
     table_invoice_aging_html = fields.Html(string='Invoice Aging', compute='_compute_table_invoice_aging_html', sanitize=False)
-
-    def _compute_company_currency(self):
-        """Get company currency for monetary fields"""
-        for rec in self:
-            rec.company_currency_id = self.env.company.currency_id
 
     def _get_order_domain(self):
         domain = [('state', 'in', ['sale', 'done'])]
