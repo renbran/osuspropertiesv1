@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dashboard record to have a singleton -->
+    <record id="osus_sales_invoicing_dashboard_record" model="osus.sales.invoicing.dashboard"/>
+
+    <!-- Form view with stat buttons -->
+    <record id="view_osus_sales_invoicing_dashboard_form" model="ir.ui.view">
+        <field name="name">osus.sales.invoicing.dashboard.form</field>
+        <field name="model">osus.sales.invoicing.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Sales &amp; Invoicing Dashboard">
+                <sheet>
+                    <group string="Filters" colspan="2">
+                        <group>
+                            <field name="sales_order_type_id" options="{'no_create': True}"/>
+                            <field name="invoice_status_filter"/>
+                        </group>
+                        <group>
+                            <field name="booking_date_from"/>
+                            <field name="booking_date_to"/>
+                            <field name="payment_status_filter"/>
+                        </group>
+                    </group>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_posted_invoices"
+                                string="Posted Invoices">
+                            <field name="posted_invoice_count" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_pending_orders"
+                                string="Orders">
+                            <field name="pending_to_invoice_order_count" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_unpaid_invoices"
+                                string="Unpaid Invoices">
+                            <field name="unpaid_invoice_count" widget="statinfo"/>
+                        </button>
+                    </div>
+
+                    <group string="Visual Charts" colspan="4">
+                        <group colspan="2">
+                            <div class="o_row">
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Sales by Type</div>
+                                        <field name="chart_sales_by_type" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'bar', 'title': 'Sales by Type'}"/>
+                                    </div>
+                                </div>
+                                <div class="o_col_6">
+                                    <div class="o_osus_chart_card">
+                                        <div class="o_osus_chart_title">Invoices by Payment State</div>
+                                        <field name="chart_payment_state" widget="osus_dashboard_chart"
+                                            class="o_osus_dashboard_chart"
+                                            options="{'chartType': 'doughnut', 'title': 'Invoices by Payment State'}"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </group>
+                        <group colspan="2">
+                            <div class="o_osus_chart_card">
+                                <div class="o_osus_chart_title">Booking Trend</div>
+                                <field name="chart_booking_trend" widget="osus_dashboard_chart"
+                                    class="o_osus_dashboard_chart"
+                                    options="{'chartType': 'line', 'title': 'Booking Trend'}"/>
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban view for C-level quick glance with chart shortcuts -->
+    <record id="view_osus_sales_invoicing_dashboard_kanban" model="ir.ui.view">
+        <field name="name">osus.sales.invoicing.dashboard.kanban</field>
+        <field name="model">osus.sales.invoicing.dashboard</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard">
+                <field name="sales_order_type_id"/>
+                <field name="booking_date_from"/>
+                <field name="booking_date_to"/>
+                <field name="invoice_status_filter"/>
+                <field name="payment_status_filter"/>
+                <field name="posted_invoice_count"/>
+                <field name="pending_to_invoice_order_count"/>
+                <field name="unpaid_invoice_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="o_kanban_card">
+                            <div class="o_kanban_primary_left">
+                                <div class="o_kanban_badge text-muted">Filters</div>
+                                <div class="o_kanban_tags">
+                                    <span t-if="record.sales_order_type_id.raw_value" class="badge badge-info">
+                                        <t t-esc="record.sales_order_type_id.value"/>
+                                    </span>
+                                    <span t-if="record.booking_date_from.raw_value or record.booking_date_to.raw_value" class="badge badge-secondary">
+                                        <t t-esc="record.booking_date_from.value or '…'"/> — <t t-esc="record.booking_date_to.value or '…'"/>
+                                    </span>
+                                    <span t-if="record.invoice_status_filter.raw_value and record.invoice_status_filter.raw_value != 'all'" class="badge badge-primary">
+                                        Invoice: <t t-esc="record.invoice_status_filter.value"/>
+                                    </span>
+                                    <span t-if="record.payment_status_filter.raw_value and record.payment_status_filter.raw_value != 'all'" class="badge badge-warning">
+                                        Payment: <t t-esc="record.payment_status_filter.value"/>
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <a type="object" name="action_open_posted_invoices" class="btn btn-primary btn-sm mr-1" role="button">
+                                        Posted Invoices
+                                        <span class="badge badge-light ml-1" t-esc="record.posted_invoice_count.value"/>
+                                    </a>
+                                    <a type="object" name="action_open_pending_orders" class="btn btn-info btn-sm mr-1" role="button">
+                                        Orders
+                                        <span class="badge badge-light ml-1" t-esc="record.pending_to_invoice_order_count.value"/>
+                                    </a>
+                                    <a type="object" name="action_open_unpaid_invoices" class="btn btn-danger btn-sm" role="button">
+                                        Unpaid Invoices
+                                        <span class="badge badge-light ml-1" t-esc="record.unpaid_invoice_count.value"/>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="o_kanban_primary_right">
+                                <div class="o_kanban_badge text-muted">Quick Charts</div>
+                                <div class="mt-2">
+                                    <a type="object" name="action_open_sales_graph" class="btn btn-secondary btn-sm btn-block mb-1" role="button">Sales by Type (Graph)</a>
+                                    <a type="object" name="action_open_booking_trend_graph" class="btn btn-secondary btn-sm btn-block mb-1" role="button">Booking Trend (Graph)</a>
+                                    <a type="object" name="action_open_invoice_payment_graph" class="btn btn-secondary btn-sm btn-block" role="button">Invoices by Payment State (Graph)</a>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Action and menu -->
+    <record id="action_osus_sales_invoicing_dashboard" model="ir.actions.act_window">
+        <field name="name">Sales &amp; Invoicing Dashboard</field>
+        <field name="res_model">osus.sales.invoicing.dashboard</field>
+        <field name="view_mode">form,kanban</field>
+        <field name="view_id" ref="view_osus_sales_invoicing_dashboard_form"/>
+        <field name="res_id" ref="osus_sales_invoicing_dashboard_record"/>
+    </record>
+
+    <!-- Menu under Sales module -->
+    <menuitem id="menu_osus_sales_invoicing_dashboard" 
+              name="Sales &amp; Invoicing Dashboard"
+              parent="sale.sale_menu_root"
+              action="action_osus_sales_invoicing_dashboard" 
+              sequence="10"/>
+              
+    <!-- Also keep it under Settings > Technical for convenience -->
+    <menuitem id="menu_osus_sales_invoicing_dashboard_technical" 
+              name="Sales &amp; Invoicing Dashboard"
+              parent="base.menu_custom"
+              action="action_osus_sales_invoicing_dashboard" 
+              sequence="90"/>
+</odoo>
