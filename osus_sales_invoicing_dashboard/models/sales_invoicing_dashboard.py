@@ -96,6 +96,8 @@ class SalesInvoicingDashboard(models.Model):
         'payment_status_filter',
     )
     def _compute_metrics(self):
+        # Invalidate cache to ensure fresh data from DB on every computation
+        self.env.invalidate_all()
         for rec in self:
             order_domain = rec._get_order_domain()
 
@@ -143,6 +145,7 @@ class SalesInvoicingDashboard(models.Model):
         'invoice_status_filter',
     )
     def _compute_chart_sales_by_type(self):
+        self.env.invalidate_all()
         palette = ['#0060df', '#00a651', '#f0ad4e', '#d9534f', '#5bc0de', '#7b7b7b']
         for rec in self:
             domain = rec._get_order_domain()
@@ -174,6 +177,7 @@ class SalesInvoicingDashboard(models.Model):
         'invoice_status_filter',
     )
     def _compute_chart_booking_trend(self):
+        self.env.invalidate_all()
         palette = ['#0060df']
         for rec in self:
             labels = []
@@ -219,6 +223,7 @@ class SalesInvoicingDashboard(models.Model):
         'payment_status_filter',
     )
     def _compute_chart_payment_state(self):
+        self.env.invalidate_all()
         palette = ['#5bc0de', '#f0ad4e', '#d9534f', '#00a651']
         for rec in self:
             domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=False)

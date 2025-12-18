@@ -1,41 +1,196 @@
 // ============================================================================
-// OSUS Sales & Invoicing Dashboard - Responsive Styles
+// OSUS Sales & Invoicing Dashboard - Professional Reporting Design
 // ============================================================================
 
+// Color Palette & Variables
+$primary-blue: #1e3a8a;
+$success-green: #10b981;
+$warning-amber: #f59e0b;
+$danger-red: #ef4444;
+$info-cyan: #06b6d4;
+$light-gray: #f3f4f6;
+$medium-gray: #e5e7eb;
+$dark-gray: #374151;
+$white: #ffffff;
+
+$chart-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+$chart-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+// ============================================================================
 // Base Chart Styles
+// ============================================================================
 .o_osus_dashboard_chart {
-    min-height: 220px;
     position: relative;
-    width: 100%;
+    width: 100% !important;
+    height: 320px !important;
+    margin: 0 !important;
 
     canvas {
-        max-width: 100%;
-        height: auto !important;
+        max-height: 320px;
     }
 }
 
 .o_osus_chart_card {
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 12px;
-    height: 100%;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
-    margin-bottom: 16px;
-    background: #fff;
+    background: $white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: $chart-shadow;
+    transition: all 0.3s ease;
+    border: 1px solid $medium-gray;
+    position: relative;
+    overflow: hidden;
+    height: auto;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, $primary-blue, $success-green);
+    }
 
     &:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-        transform: translateY(-2px);
+        box-shadow: $chart-shadow-lg;
+        transform: translateY(-4px);
+        border-color: $primary-blue;
     }
 }
 
 .o_osus_chart_title {
-    font-weight: 600;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: #2c3e50;
-    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: $primary-blue;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    margin-top: 0;
+
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 18px;
+        background: linear-gradient(180deg, $primary-blue, $success-green);
+        border-radius: 2px;
+        margin-right: 10px;
+    }
+}
+
+// ============================================================================
+// Dashboard Form & Layout Improvements
+// ============================================================================
+.o_form_view[data-model="osus.sales.invoicing.dashboard"] {
+    background: linear-gradient(135deg, $light-gray 0%, $white 100%);
+    min-height: 100vh;
+
+    .o_form_sheet {
+        background: $white;
+        box-shadow: $chart-shadow-lg;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+
+    .oe_button_box {
+        background: linear-gradient(135deg, $primary-blue 0%, #1e40af 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+        border: none;
+        box-shadow: $chart-shadow-lg;
+
+        .oe_stat_button {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 10px;
+            color: $primary-blue;
+            font-weight: 600;
+            padding: 15px 20px;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s ease;
+            box-shadow: $chart-shadow;
+            min-width: 150px;
+            text-align: center;
+
+            &:hover {
+                background: $white;
+                transform: translateY(-2px);
+                box-shadow: $chart-shadow-lg;
+            }
+
+            .o_stat_info {
+                .o_stat_value {
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: $primary-blue;
+                }
+
+                .o_stat_text {
+                    font-size: 12px;
+                    color: $dark-gray;
+                    margin-top: 5px;
+                }
+            }
+        }
+    }
+
+    .oe_title {
+        margin: 0 0 20px 0;
+
+        h1 {
+            font-size: 28px;
+            color: $primary-blue;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+    }
+
+    .oe_group {
+        &[string="Filters"] {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 2px solid $medium-gray;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+
+            > div > div > label {
+                color: $primary-blue;
+                font-weight: 600;
+                font-size: 13px;
+            }
+
+            .o_field_widget {
+                border-radius: 8px;
+                border: 1px solid $medium-gray;
+
+                &:focus,
+                &:focus-within {
+                    border-color: $primary-blue;
+                    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+                }
+            }
+        }
+
+        &[string="Visual Charts"] {
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin-top: 30px;
+
+            > div > label {
+                font-size: 18px;
+                color: $primary-blue;
+                font-weight: 700;
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+        }
+    }
 }
 
 // ============================================================================

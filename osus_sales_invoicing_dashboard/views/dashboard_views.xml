@@ -10,6 +10,31 @@
         <field name="arch" type="xml">
             <form string="Sales &amp; Invoicing Dashboard">
                 <sheet>
+                    <!-- Dashboard Title -->
+                    <div class="oe_title">
+                        <h1>Sales &amp; Invoicing Dashboard</h1>
+                    </div>
+
+                    <!-- KPI Stat Buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_posted_invoices"
+                                string="Posted Invoices">
+                            <field name="posted_invoice_count" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_pending_orders"
+                                string="Orders to Invoice">
+                            <field name="pending_to_invoice_order_count" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_open_unpaid_invoices"
+                                string="Unpaid Invoices">
+                            <field name="unpaid_invoice_count" widget="statinfo"/>
+                        </button>
+                    </div>
+
+                    <!-- Filters Section -->
                     <group string="Filters" colspan="2">
                         <group>
                             <field name="sales_order_type_id" options="{'no_create': True}"/>
@@ -21,25 +46,10 @@
                             <field name="payment_status_filter"/>
                         </group>
                     </group>
-                    <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_posted_invoices"
-                                string="Posted Invoices">
-                            <field name="posted_invoice_count" widget="statinfo"/>
-                        </button>
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_pending_orders"
-                                string="Orders">
-                            <field name="pending_to_invoice_order_count" widget="statinfo"/>
-                        </button>
-                        <button class="oe_stat_button" type="object"
-                                name="action_open_unpaid_invoices"
-                                string="Unpaid Invoices">
-                            <field name="unpaid_invoice_count" widget="statinfo"/>
-                        </button>
-                    </div>
 
+                    <!-- Visual Charts Section -->
                     <group string="Visual Charts" colspan="4">
+                        <!-- Sales by Type &amp; Payment State Row -->
                         <group colspan="2">
                             <div class="o_row">
                                 <div class="o_col_6">
@@ -60,6 +70,7 @@
                                 </div>
                             </div>
                         </group>
+                        <!-- Booking Trend Row -->
                         <group colspan="2">
                             <div class="o_osus_chart_card">
                                 <div class="o_osus_chart_title">Booking Trend</div>
