@@ -38,6 +38,7 @@ class SalesInvoicingDashboard(models.Model):
         default='all',
     )
 
+    # Computed metrics using field relationships
     posted_invoice_count = fields.Integer(
         string='Posted Invoices', compute='_compute_metrics', store=False
     )
@@ -47,10 +48,24 @@ class SalesInvoicingDashboard(models.Model):
     unpaid_invoice_count = fields.Integer(
         string='Unpaid Invoices', compute='_compute_metrics', store=False
     )
+    total_invoiced_amount = fields.Monetary(
+        string='Total Invoiced Amount', compute='_compute_metrics', store=False,
+        currency_field='company_currency_id'
+    )
+    total_pending_amount = fields.Monetary(
+        string='Total Pending to Invoice', compute='_compute_metrics', store=False,
+        currency_field='company_currency_id'
+    )
+    company_currency_id = fields.Many2one('res.currency', compute='_compute_company_currency')
 
     chart_sales_by_type = fields.Json(
         string='Chart Sales by Type', compute='_compute_chart_sales_by_type'
     )
+
+    def _compute_company_currency(self):
+        """Get company currency for monetary fields"""
+        for rec in self:
+            rec.company_currency_id = self.env.company.currency_id
     chart_booking_trend = fields.Json(
         string='Chart Booking Trend', compute='_compute_chart_booking_trend'
     )
@@ -104,7 +119,7 @@ class SalesInvoicingDashboard(models.Model):
             matching_orders = self.env['sale.order'].search(order_domain)
             order_ids = matching_orders.ids
 
-            # Posted invoices count (filtered by selected orders and payment status if provided)
+            # Posted invoices count and total amount (filtered by selected orders and payment status if provided)
             posted_domain = [
                 ('state', '=', 'posted'),
                 ('move_type', 'in', ['out_invoice', 'out_refund']),
@@ -113,16 +128,22 @@ class SalesInvoicingDashboard(models.Model):
                 posted_domain.append(('line_ids.sale_line_ids.order_id', 'in', order_ids))
             if rec.payment_status_filter and rec.payment_status_filter != 'all':
                 posted_domain.append(('payment_state', '=', rec.payment_status_filter))
-            rec.posted_invoice_count = self.env['account.move'].search_count(posted_domain)
+            
+            posted_invoices = self.env['account.move'].search(posted_domain)
+            rec.posted_invoice_count = len(posted_invoices)
+            rec.total_invoiced_amount = sum(posted_invoices.mapped('amount_total'))
 
-            # Orders to invoice count (respecting filters, but always focusing 'to invoice')
+            # Orders to invoice count and total pending amount (respecting filters, but always focusing 'to invoice')
             pending_domain = list(order_domain)
             # If invoice_status_filter is 'all', focus on 'to invoice'
             if rec.invoice_status_filter == 'all':
                 # Replace any existing invoice_status in order_domain
                 pending_domain = [d for d in pending_domain if not (isinstance(d, tuple) and d[0] == 'invoice_status')]
                 pending_domain.append(('invoice_status', '=', 'to invoice'))
-            rec.pending_to_invoice_order_count = self.env['sale.order'].search_count(pending_domain)
+            
+            pending_orders = self.env['sale.order'].search(pending_domain)
+            rec.pending_to_invoice_order_count = len(pending_orders)
+            rec.total_pending_amount = sum(pending_orders.mapped('amount_to_invoice'))
 
             # Unpaid invoices count (filtered by orders and payment status)
             unpaid_domain = [
@@ -150,7 +171,7 @@ class SalesInvoicingDashboard(models.Model):
         for rec in self:
             domain = rec._get_order_domain()
             groups = self.env['sale.order'].read_group(
-                domain, ['amount_total'], ['sale_order_type_id']
+                domain, ['amount_total'], ['sale_order_type_id'], orderby='amount_total DESC'
             )
             labels = []
             data = []
@@ -163,9 +184,11 @@ class SalesInvoicingDashboard(models.Model):
                 'labels': labels,
                 'datasets': [
                     {
-                        'label': 'Sales by Type',
+                        'label': 'Sales Amount',
                         'data': data,
                         'backgroundColor': colors,
+                        'borderColor': colors,
+                        'borderWidth': 1,
                     }
                 ],
             }
@@ -183,19 +206,19 @@ class SalesInvoicingDashboard(models.Model):
             labels = []
             data = []
             try:
-                    domain = rec._get_order_domain()
-                    groups = self.env['sale.order'].read_group(
-                        domain,
-                        ['amount_total'],
-                        ['booking_date:month'],
-                        orderby='booking_date:month',
-                        lazy=False
-                    )
-                    for group in groups:
-                        # Safe dict access - don't trigger field machinery
-                        month_label = str(group.get('booking_date:month') or 'Unspecified')
-                        labels.append(month_label)
-                        data.append(float(group.get('amount_total', 0) or 0))
+                domain = rec._get_order_domain()
+                groups = self.env['sale.order'].read_group(
+                    domain,
+                    ['amount_total'],
+                    ['booking_date:month'],
+                    orderby='booking_date:month',
+                    lazy=False
+                )
+                for group in groups:
+                    # Safe dict access - don't trigger field machinery
+                    month_label = str(group.get('booking_date:month') or 'Unspecified')
+                    labels.append(month_label)
+                    data.append(float(group.get('amount_total', 0) or 0))
             except Exception:
                 # If any error occurs, show empty chart
                 labels = ['No data available']
@@ -207,10 +230,11 @@ class SalesInvoicingDashboard(models.Model):
                     {
                         'label': 'Booking Amount',
                         'data': data,
-                        'backgroundColor': palette * max(1, len(data)),
-                        'borderColor': palette * max(1, len(data)),
+                        'backgroundColor': palette[0],
+                        'borderColor': palette[0],
                         'fill': False,
-                        'tension': 0.25,
+                        'tension': 0.3,
+                        'borderWidth': 2,
                     }
                 ],
             }
@@ -234,8 +258,16 @@ class SalesInvoicingDashboard(models.Model):
             )
             labels = []
             data = []
+            # Friendly names for payment states
+            state_names = {
+                'not_paid': 'Not Paid',
+                'partial': 'Partially Paid',
+                'in_payment': 'In Payment',
+                'paid': 'Paid',
+            }
             for group in groups:
-                label = group.get('payment_state') or 'unknown'
+                payment_state = group.get('payment_state') or 'unknown'
+                label = state_names.get(payment_state, str(payment_state))
                 labels.append(label)
                 data.append(group.get('amount_total', 0.0))
             colors = [palette[i % len(palette)] for i in range(len(data))]
@@ -243,9 +275,11 @@ class SalesInvoicingDashboard(models.Model):
                 'labels': labels,
                 'datasets': [
                     {
-                        'label': 'Invoices by Payment State',
+                        'label': 'Invoice Amount by Payment State',
                         'data': data,
                         'backgroundColor': colors,
+                        'borderColor': colors,
+                        'borderWidth': 1,
                     }
                 ],
             }
