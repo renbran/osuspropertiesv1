@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import http, fields
 from odoo.http import request
+from odoo.http import content_disposition
 import io
 import csv
 
@@ -19,13 +20,13 @@ class OsusDashboardExportController(http.Controller):
         writer.writerow(headers)
         for r in rows:
             writer.writerow(r)
-        content = buf.getvalue().encode('utf-8')
+        content = buf.getvalue()
         buf.close()
         return request.make_response(
             content,
             headers=[
                 ('Content-Type', 'text/csv; charset=utf-8'),
-                ('Content-Disposition', f'attachment; filename="{filename}"'),
+                ('Content-Disposition', content_disposition(filename)),
             ],
         )
 
@@ -141,3 +142,15 @@ class OsusDashboardExportController(http.Controller):
             b = buckets[key]
             rows.append([b['label'], b['count'], b['amount']])
         return self._csv_response('invoice_aging.csv', headers, rows)
+
+    @http.route('/osus_dashboard/api/refresh', type='json', auth='user')
+    def refresh_dashboard(self, dashboard_id):
+        """Force refresh dashboard data via AJAX by invalidating cache."""
+        try:
+            dashboard = request.env['osus.sales.invoicing.dashboard'].sudo().browse(int(dashboard_id))
+            if not dashboard.exists():
+                return {'success': False, 'error': 'Dashboard not found'}
+            request.env.invalidate_all()
+            return {'success': True, 'timestamp': fields.Datetime.now()}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}

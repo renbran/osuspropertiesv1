@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
+from odoo.tools import ormcache
 from datetime import date
 
 
@@ -10,6 +11,7 @@ class SalesInvoicingDashboard(models.Model):
 
     # Simple label so the record always has a display name in forms/kanban
     name = fields.Char(default='Sales & Invoicing Dashboard', readonly=True)
+    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company, readonly=True)
 
     # Filters
     sales_order_type_id = fields.Many2one(
@@ -19,8 +21,8 @@ class SalesInvoicingDashboard(models.Model):
         'sale.order.type', string='Sales Order Types',
         help='Filter by one or more order types'
     )
-    booking_date_from = fields.Date(string='Booking Date From', default=lambda self: date.today().replace(day=1))
-    booking_date_to = fields.Date(string='Booking Date To', default=lambda self: date.today())
+    booking_date_from = fields.Date(string='Booking Date From')
+    booking_date_to = fields.Date(string='Booking Date To')
     invoice_status_filter = fields.Selection(
         [
             ('all', 'All'),
@@ -28,8 +30,7 @@ class SalesInvoicingDashboard(models.Model):
             ('to invoice', 'Pending to Invoice'),
             ('invoiced', 'Fully Invoiced'),
         ],
-        string='Invoice Status',
-        default='all',
+        string='Invoice Status'
     )
     payment_status_filter = fields.Selection(
         [
@@ -39,8 +40,7 @@ class SalesInvoicingDashboard(models.Model):
             ('in_payment', 'In Payment'),
             ('paid', 'Paid'),
         ],
-        string='Payment Status',
-        default='all',
+        string='Payment Status'
     )
 
     # Additional recommended filters
@@ -89,6 +89,10 @@ class SalesInvoicingDashboard(models.Model):
         readonly=True,
         default=lambda self: self.env.company.currency_id
     )
+
+    _sql_constraints = [
+        ('unique_name_singleton', 'unique(name)', 'Only one dashboard record is allowed!')
+    ]
 
     chart_sales_by_type = fields.Json(
         string='Chart Sales by Type', compute='_compute_chart_sales_by_type'
@@ -152,6 +156,60 @@ class SalesInvoicingDashboard(models.Model):
         if include_payment_filter and self.payment_status_filter and self.payment_status_filter != 'all':
             domain.append(('payment_state', '=', self.payment_status_filter))
         return domain
+
+    @api.model
+    def create(self, vals):
+        # Enforce singleton: reuse existing record if any
+        existing = self.search([], limit=1)
+        if existing:
+            return existing
+        # Set defaults only on creation if not already set
+        if 'booking_date_from' not in vals:
+            vals['booking_date_from'] = date.today().replace(day=1)
+        if 'booking_date_to' not in vals:
+            vals['booking_date_to'] = date.today()
+        if 'invoice_status_filter' not in vals:
+            vals['invoice_status_filter'] = 'all'
+        if 'payment_status_filter' not in vals:
+            vals['payment_status_filter'] = 'all'
+        return super(SalesInvoicingDashboard, self).create(vals)
+
+    @api.model
+    def get_dashboard_singleton(self):
+        """Return the singleton dashboard record, creating one if absent."""
+        rec = self.search([], limit=1)
+        if not rec:
+            rec = self.create({})
+        return rec
+
+    @ormcache('self.id', 'date_from', 'date_to')
+    def _get_cached_order_stats(self, date_from, date_to):
+        """Cached aggregation for orders between dates, to speed up charts.
+        Returns dict with totals: amount_total, count.
+        """
+        domain = [('state', 'in', ['sale', 'done'])]
+        if date_from:
+            domain.append(('booking_date', '>=', date_from))
+        if date_to:
+            domain.append(('booking_date', '<=', date_to))
+        groups = self.env['sale.order'].read_group(domain, ['amount_total', 'id:count'], [])
+        total = sum(g.get('amount_total', 0.0) or 0.0 for g in groups)
+        count = sum(int(g.get('id_count', 0) or g.get('__count', 0) or 0) for g in groups)
+        return {'amount_total': total, 'count': count}
+
+    @api.onchange(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
+    def _onchange_filters(self):
+        # Trigger recomputation when any filter changes
+        pass
 
     @api.depends(
         'sales_order_type_id',

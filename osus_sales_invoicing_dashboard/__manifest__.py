@@ -22,6 +22,7 @@
     },
     'data': [
         'security/ir.model.access.csv',
+        'security/dashboard_security.xml',
         'views/website_layout_fix.xml',
         'views/dashboard_views.xml',
         'views/sale_order_views.xml',
