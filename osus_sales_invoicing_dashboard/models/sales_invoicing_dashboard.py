@@ -195,10 +195,8 @@ class SalesInvoicingDashboard(models.Model):
             'agent_partner_id', 'partner_id',
         }
 
-        if any(field in vals for field in filter_fields):
-            # Clear specific ormcache for order stats if filter changed
-            if hasattr(self, '_get_cached_order_stats'):
-                self._get_cached_order_stats.clear_cache(self)
+        # Note: Cache invalidation removed - @api.depends handles this automatically
+        # Manual clear_cache() was causing AttributeError and is not needed
 
         return result
 
@@ -218,9 +216,8 @@ class SalesInvoicingDashboard(models.Model):
         """
         self.ensure_one()
 
-        # Clear the ormcache for order stats
-        if hasattr(self, '_get_cached_order_stats'):
-            self._get_cached_order_stats.clear_cache(self)
+        # Note: Cache clearing removed - @api.depends handles invalidation automatically
+        # Accessing computed fields below triggers recomputation
 
         # Explicitly trigger recalculation of all computed fields
         # Note: Accessing computed fields triggers recomputation automatically
@@ -1120,9 +1117,8 @@ class SalesInvoicingDashboard(models.Model):
             # Commit to ensure values are persisted
             self.env.cr.commit()
 
-        # Clear ormcache for order stats (specific cache, not invalidate_all)
-        if hasattr(rec, '_get_cached_order_stats'):
-            rec._get_cached_order_stats.clear_cache(rec)
+        # Note: Cache clearing removed - @api.depends handles invalidation automatically
+        # Accessing computed fields below triggers recomputation
 
         # Explicitly access computed fields to trigger their computation
         computed_data = {
