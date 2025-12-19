@@ -82,6 +82,12 @@ patch(FormController.prototype, {
 
         this._filterChangeTimeout = setTimeout(async () => {
             try {
+                // First, save the form to persist filter changes to the database
+                if (this.model.root && this.model.root.isDirty) {
+                    console.debug('Dashboard: saving form to persist filter changes');
+                    await this.model.root.save();
+                }
+
                 // Collect current filter values from the form
                 const filterValues = this._getFilterValues();
                 console.debug('Dashboard: collected filter values', filterValues);
@@ -93,9 +99,7 @@ patch(FormController.prototype, {
                 // Update the form with the refreshed computed values
                 await this._updateComputedFields(refreshedData);
 
-                // Render the updated form
-                this.render();
-                console.debug('Dashboard: form rendered with updated data');
+                console.debug('Dashboard: form updated with refreshed data');
             } catch (error) {
                 console.error('Dashboard: error refreshing after filter change', error);
             }
@@ -152,14 +156,14 @@ patch(FormController.prototype, {
         // Update each computed field with the refreshed value
         for (const [fieldName, fieldValue] of Object.entries(refreshedData)) {
             if (COMPUTED_FIELDS.includes(fieldName) && fieldName in record.data) {
-                // Update the field value directly in the record's data
+                // Update the field value in the record's data
                 record.data[fieldName] = fieldValue;
             }
         }
 
-        // Note: DO NOT clear record._changes here as it was causing filter rollback
-        // Let Odoo's form controller manage the change tracking state
-        // The @api.depends mechanism will handle computed field updates automatically
+        // Force a reload of the record to ensure all computed fields are refreshed
+        // This will trigger a re-render of the form with the updated values
+        await record.model.load();
     },
 
     /**
