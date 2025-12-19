@@ -122,7 +122,8 @@ class SalesInvoicingDashboard(models.Model):
     def _get_order_domain(self):
         domain = [('state', 'in', ['sale', 'done'])]
         # Multi-select takes precedence if set
-        if self.sales_order_type_ids:
+        # Important: Check .ids directly - empty recordset is still truthy!
+        if self.sales_order_type_ids.ids:  # Check ids list, not recordset
             domain.append(('sale_order_type_id', 'in', self.sales_order_type_ids.ids))
         elif self.sales_order_type_id:
             domain.append(('sale_order_type_id', '=', self.sales_order_type_id.id))
