@@ -180,6 +180,10 @@ class SalesInvoicingDashboard(models.Model):
         Override write to ensure computed fields are refreshed when filters change.
         This handles cases where filters are updated programmatically or through
         the UI in ways that might not trigger @api.onchange.
+
+        Note: Odoo's @api.depends automatically invalidates computed field caches
+        when their dependencies change. Manual cache invalidation is not needed
+        and was causing filter field rollback issues.
         """
         result = super(SalesInvoicingDashboard, self).write(vals)
 
@@ -192,8 +196,9 @@ class SalesInvoicingDashboard(models.Model):
         }
 
         if any(field in vals for field in filter_fields):
-            # Invalidate cache to force fresh computation
-            self.env.invalidate_all()
+            # Clear specific ormcache for order stats if filter changed
+            if hasattr(self, '_get_cached_order_stats'):
+                self._get_cached_order_stats.clear_cache(self)
 
         return result
 
@@ -213,13 +218,12 @@ class SalesInvoicingDashboard(models.Model):
         """
         self.ensure_one()
 
-        # Force invalidate all cached data
-        self.env.invalidate_all()
-
         # Clear the ormcache for order stats
-        self._get_cached_order_stats.clear_cache(self)
+        if hasattr(self, '_get_cached_order_stats'):
+            self._get_cached_order_stats.clear_cache(self)
 
         # Explicitly trigger recalculation of all computed fields
+        # Note: Accessing computed fields triggers recomputation automatically
         self._refresh_all_computed_fields()
 
         # Return action to reload the form view
@@ -246,12 +250,11 @@ class SalesInvoicingDashboard(models.Model):
     def _refresh_all_computed_fields(self):
         """
         Helper method to force refresh all computed fields.
-        This explicitly invalidates cache and accesses all computed fields
-        to trigger their recalculation.
-        """
-        # Clear any cached computed field values to force recalculation
-        self.env.invalidate_all()
+        This explicitly accesses all computed fields to trigger their recalculation.
 
+        Note: Manual cache invalidation is not needed - Odoo's @api.depends
+        handles this automatically when dependencies change.
+        """
         # Access metrics (KPIs) to trigger computation
         _ = self.posted_invoice_count
         _ = self.pending_to_invoice_order_count
@@ -318,8 +321,8 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_metrics(self):
-        # Invalidate cache to ensure fresh data from DB on every computation
-        self.env.invalidate_all()
+        # Note: Odoo's @api.depends automatically handles cache invalidation
+        # Manual invalidate_all() was causing filter field rollback issues
         for rec in self:
             order_domain = rec._get_order_domain()
 
@@ -405,7 +408,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_sales_by_type(self):
-        self.env.invalidate_all()
         palette = ['#0060df', '#00a651', '#f0ad4e', '#d9534f', '#5bc0de', '#7b7b7b']
         for rec in self:
             domain = rec._get_order_domain()
@@ -443,7 +445,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_booking_trend(self):
-        self.env.invalidate_all()
         palette = ['#0060df']
         for rec in self:
             labels = []
@@ -493,7 +494,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_payment_state(self):
-        self.env.invalidate_all()
         palette = ['#5bc0de', '#f0ad4e', '#d9534f', '#00a651']
         for rec in self:
             domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=False)
@@ -541,7 +541,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_sales_funnel(self):
-        self.env.invalidate_all()
         for rec in self:
             data = [
                 float(rec.total_booked_sales or 0.0),
@@ -570,7 +569,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_top_customers(self):
-        self.env.invalidate_all()
         for rec in self:
             domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=True)
             groups = self.env['account.move'].read_group(
@@ -602,7 +600,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_chart_agent_performance(self):
-        self.env.invalidate_all()
         for rec in self:
             order_ids = self.env['sale.order'].search(rec._get_order_domain()).ids
             labels, total_vals, paid_vals, out_vals = [], [], [], []
@@ -690,7 +687,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_table_order_type_html(self):
-        self.env.invalidate_all()
         for rec in self:
             rows = rec._get_order_type_rows()
             html = [
@@ -756,7 +752,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_table_agent_commission_html(self):
-        self.env.invalidate_all()
         for rec in self:
             order_ids = self.env['sale.order'].search(rec._get_order_domain()).ids
             html = [
@@ -820,7 +815,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_table_detailed_orders_html(self):
-        self.env.invalidate_all()
         today = fields.Date.context_today(self)
         for rec in self:
             orders = self.env['sale.order'].search(rec._get_order_domain(), order='booking_date desc, id desc', limit=50)
@@ -902,7 +896,6 @@ class SalesInvoicingDashboard(models.Model):
         'partner_id',
     )
     def _compute_table_invoice_aging_html(self):
-        self.env.invalidate_all()
         today = fields.Date.context_today(self)
         for rec in self:
             domain = rec._get_invoice_domain(include_payment_filter=False, unpaid_only=True)
@@ -1127,10 +1120,7 @@ class SalesInvoicingDashboard(models.Model):
             # Commit to ensure values are persisted
             self.env.cr.commit()
 
-        # Force cache invalidation to ensure fresh computation
-        self.env.invalidate_all()
-
-        # Clear ormcache for order stats
+        # Clear ormcache for order stats (specific cache, not invalidate_all)
         if hasattr(rec, '_get_cached_order_stats'):
             rec._get_cached_order_stats.clear_cache(rec)
 

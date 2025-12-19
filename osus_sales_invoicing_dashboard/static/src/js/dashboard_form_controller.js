@@ -157,10 +157,9 @@ patch(FormController.prototype, {
             }
         }
 
-        // Mark the record as not dirty since we're syncing with server state
-        if (record._changes) {
-            record._changes = {};
-        }
+        // Note: DO NOT clear record._changes here as it was causing filter rollback
+        // Let Odoo's form controller manage the change tracking state
+        // The @api.depends mechanism will handle computed field updates automatically
     },
 
     /**
