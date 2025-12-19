@@ -11,6 +11,14 @@ import { patch } from "@web/core/utils/patch";
 import { Dialog } from "@web/core/dialog/dialog";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
+// Patch the component class to define proper props
+patch(Many2ManyTagsFieldColorEditable, {
+    props: {
+        ...Many2ManyTagsFieldColorEditable.props,
+        colorField: { type: String, optional: true },
+    },
+});
+
 patch(Many2ManyTagsFieldColorEditable.prototype, {
     /*Here Many2ManyTagsFieldColorEditable is patched to over ride onBadgeClick()*/
     setup() {
