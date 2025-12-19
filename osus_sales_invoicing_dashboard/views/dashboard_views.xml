@@ -4,14 +4,13 @@
     <record id="osus_sales_invoicing_dashboard_record" model="osus.sales.invoicing.dashboard"/>
 
     <!-- Form view with enhanced dashboard -->
-    <record id="view_osus_sales_invoicing_dashboard_form" model="ir.ui.view">
-        <field name="name">osus.sales.invoicing.dashboard.form</field>
+    <record id="view_osus_sales_invoicing_dashboard_form_v3" model="ir.ui.view">
+        <field name="name">osus.sales.invoicing.dashboard.form.v3</field>
         <field name="model">osus.sales.invoicing.dashboard</field>
         <field name="arch" type="xml">
             <form string="Sales &amp; Invoicing Dashboard" create="false" delete="false" class="o_sales_dashboard">
                 <field name="name" invisible="1"/>
                 <field name="company_currency_id" invisible="1"/>
-                <field name="sales_order_type_id" invisible="1"/>
                 <header>
                     <button name="%(action_osus_sales_invoicing_dashboard)d" string="Refresh Dashboard" type="action" class="btn-primary" icon="fa-refresh"/>
                 </header>
@@ -29,7 +28,7 @@
                             <field name="invoice_status_filter" widget="radio" options="{'horizontal': true}" class="o_dashboard_filter"/>
                         </group>
                         <group>
-                            <field name="sales_order_type_ids" widget="many2many_tags" placeholder="All Order Types" options="{'no_create': True, 'color_field': false}" class="o_dashboard_filter"/>
+                            <field name="sales_order_type_ids" widget="many2many_tags" placeholder="All Order Types" options="{'no_create': True}" class="o_dashboard_filter"/>
                             <field name="agent_partner_id" string="Salesperson" placeholder="All Salespersons" options="{'no_create': True, 'no_open': True}" domain="[('is_company', '=', False)]" class="o_dashboard_filter"/>
                             <field name="partner_id" string="Customer" placeholder="All Customers" options="{'no_create': True, 'no_open': True}" class="o_dashboard_filter"/>
                             <field name="payment_status_filter" widget="radio" options="{'horizontal': true}" class="o_dashboard_filter"/>
@@ -164,12 +163,11 @@
     </record>
 
     <!-- Kanban view for C-level quick glance with chart shortcuts -->
-    <record id="view_osus_sales_invoicing_dashboard_kanban" model="ir.ui.view">
-        <field name="name">osus.sales.invoicing.dashboard.kanban</field>
+    <record id="view_osus_sales_invoicing_dashboard_kanban_v3" model="ir.ui.view">
+        <field name="name">osus.sales.invoicing.dashboard.kanban.v3</field>
         <field name="model">osus.sales.invoicing.dashboard</field>
         <field name="arch" type="xml">
             <kanban class="o_kanban_dashboard">
-                <field name="sales_order_type_id"/>
                 <field name="booking_date_from"/>
                 <field name="booking_date_to"/>
                 <field name="invoice_status_filter"/>
@@ -183,9 +181,6 @@
                             <div class="o_kanban_primary_left">
                                 <div class="o_kanban_badge text-muted">Filters</div>
                                 <div class="o_kanban_tags">
-                                    <span t-if="record.sales_order_type_id.raw_value" class="badge badge-info">
-                                        <t t-esc="record.sales_order_type_id.value"/>
-                                    </span>
                                     <span t-if="record.booking_date_from.raw_value or record.booking_date_to.raw_value" class="badge badge-secondary">
                                         <t t-esc="record.booking_date_from.value or '…'"/> — <t t-esc="record.booking_date_to.value or '…'"/>
                                     </span>
@@ -231,7 +226,7 @@
         <field name="name">Sales &amp; Invoicing Dashboard</field>
         <field name="res_model">osus.sales.invoicing.dashboard</field>
         <field name="view_mode">form,kanban</field>
-        <field name="view_id" ref="view_osus_sales_invoicing_dashboard_form"/>
+        <field name="view_id" ref="view_osus_sales_invoicing_dashboard_form_v3"/>
         <field name="res_id" ref="osus_sales_invoicing_dashboard_record"/>
         <!-- Open directly in edit mode so filters are immediately usable -->
         <field name="context">{'form_view_initial_mode': 'edit', 'force_detailed_view': True}</field>
