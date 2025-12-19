@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'OSUS Sales & Invoicing Dashboard',
-    'version': '17.0.1.0.2',
+    'version': '17.0.1.0.4',
     'category': 'Sales',
     'summary': 'Mini dashboard for invoicing KPIs and sale order tags.',
     'description': (
@@ -17,6 +17,7 @@
         'web.assets_backend': [
             'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
+            'osus_sales_invoicing_dashboard/static/src/js/dashboard_filters.js',
             'osus_sales_invoicing_dashboard/static/src/scss/dashboard_charts.scss',
         ],
     },

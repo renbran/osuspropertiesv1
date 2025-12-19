@@ -2,28 +2,19 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-# Extend the SALE_ORDER_STATE to include 'done'
-EXTENDED_SALE_ORDER_STATE = [
-    ('draft', 'Quotation'),
-    ('sent', 'Quotation Sent'),
-    ('sale', 'Sales Order'),
-    ('done', 'Completed'),
-    ('cancel', 'Cancelled'),
-]
-
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
-    # Override state field to add 'done' option
+    # Extend the state field to add 'done' option using selection_add (proper way)
+    # This avoids overriding the entire selection, which causes Odoo warnings
     state = fields.Selection(
-        selection=EXTENDED_SALE_ORDER_STATE,
-        string='Status',
-        readonly=True,
-        copy=False,
-        index=True,
-        tracking=3,
-        default='draft'
+        selection_add=[
+            ('done', 'Completed'),
+        ],
+        ondelete={
+            'done': 'set null',
+        }
     )
 
     # Custom workflow state field

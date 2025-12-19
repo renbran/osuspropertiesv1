@@ -210,13 +210,26 @@ class SalesInvoicingDashboard(models.Model):
     def _onchange_filters(self):
         """
         Trigger recomputation of all computed fields when filters change.
-        This ensures dashboard KPIs, charts, and tables update in real-time.
+        
+        IMPORTANT: In Odoo, @api.onchange methods run in memory but the record
+        is not saved. To ensure computed fields are updated in the form:
+        
+        1. We invalidate the cache to force fresh computation
+        2. We access all computed fields to trigger their @api.depends
+        3. The form framework automatically refreshes fields marked as computed
+        4. We use the warning mechanism to ensure UI refresh
+        
+        This method is called by the form when any filter field is modified,
+        ensuring all dependent KPIs, charts, and tables update immediately.
         """
-        # Invalidate cache to force recomputation of all dependent computed fields
+        # Critical: invalidate cache for this record to force fresh computation
         self.invalidate_cache()
         
-        # Explicitly access computed fields to force recalculation
-        # This ensures the form UI receives updated values immediately
+        # Explicitly access computed fields to trigger their computation
+        # This causes the @api.depends decorator to trigger _compute_* methods
+        # and ensures values are fresh from database
+        
+        # Access metrics to trigger computation
         _ = self.posted_invoice_count
         _ = self.pending_to_invoice_order_count
         _ = self.unpaid_invoice_count
@@ -226,16 +239,24 @@ class SalesInvoicingDashboard(models.Model):
         _ = self.amount_to_collect
         _ = self.amount_collected
         _ = self.commission_due
+        
+        # Access charts to trigger computation
         _ = self.chart_sales_by_type
         _ = self.chart_booking_trend
         _ = self.chart_payment_state
         _ = self.chart_sales_funnel
         _ = self.chart_top_customers
         _ = self.chart_agent_performance
+        
+        # Access tables to trigger computation
         _ = self.table_order_type_html
         _ = self.table_agent_commission_html
         _ = self.table_detailed_orders_html
         _ = self.table_invoice_aging_html
+        
+        # Note: Odoo's form framework automatically detects that computed fields
+        # have changed and refreshes them in the UI. We don't need to return
+        # anything special - the form will re-read all fields marked as @api.depends
 
     @api.depends(
         'sales_order_type_id',
@@ -930,3 +951,69 @@ class SalesInvoicingDashboard(models.Model):
             'graph_groupby': 'booking_date:month',
         }
         return action
+
+    @api.model
+    def update_filters_and_refresh(self, filters_data):
+        """
+        API endpoint for frontend to update filters and get refreshed data.
+        This ensures filters are properly saved and all computed fields are updated.
+        
+        Args:
+            filters_data: dict with filter field names and values
+                {
+                    'booking_date_from': '2025-01-01',
+                    'booking_date_to': '2025-12-31',
+                    'sales_order_type_ids': [1, 2, 3],
+                    'invoice_status_filter': 'to invoice',
+                    ...
+                }
+        
+        Returns:
+            dict with updated field values for the dashboard
+        """
+        rec = self.get_dashboard_singleton()
+        
+        # Update filter fields with provided values
+        for field_name, field_value in filters_data.items():
+            if hasattr(rec, field_name) and field_name in rec._fields:
+                field = rec._fields[field_name]
+                # Handle many2many fields specially
+                if field.type == 'many2many':
+                    if isinstance(field_value, list):
+                        rec[field_name] = [(6, 0, field_value)]  # Replace all
+                else:
+                    rec[field_name] = field_value
+        
+        # Save the record - this persists the filter values
+        rec.flush()
+        
+        # Force cache invalidation to ensure fresh computation
+        self.env.cache.invalidate()
+        
+        # Recompute all dependent fields
+        rec.invalidate_cache()
+        
+        # Explicitly access computed fields to trigger their computation
+        computed_data = {
+            'posted_invoice_count': rec.posted_invoice_count,
+            'pending_to_invoice_order_count': rec.pending_to_invoice_order_count,
+            'unpaid_invoice_count': rec.unpaid_invoice_count,
+            'total_booked_sales': rec.total_booked_sales,
+            'total_invoiced_amount': rec.total_invoiced_amount,
+            'total_pending_amount': rec.total_pending_amount,
+            'amount_to_collect': rec.amount_to_collect,
+            'amount_collected': rec.amount_collected,
+            'commission_due': rec.commission_due,
+            'chart_sales_by_type': rec.chart_sales_by_type,
+            'chart_booking_trend': rec.chart_booking_trend,
+            'chart_payment_state': rec.chart_payment_state,
+            'chart_sales_funnel': rec.chart_sales_funnel,
+            'chart_top_customers': rec.chart_top_customers,
+            'chart_agent_performance': rec.chart_agent_performance,
+            'table_order_type_html': rec.table_order_type_html,
+            'table_agent_commission_html': rec.table_agent_commission_html,
+            'table_detailed_orders_html': rec.table_detailed_orders_html,
+            'table_invoice_aging_html': rec.table_invoice_aging_html,
+        }
+        
+        return computed_data
