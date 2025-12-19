@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'OSUS Sales & Invoicing Dashboard',
-    'version': '17.0.1.0.8',
+    'version': '17.0.1.0.9',
     'category': 'Sales',
     'summary': 'Mini dashboard for invoicing KPIs and sale order tags.',
     'description': (
