@@ -217,13 +217,12 @@ class SalesInvoicingDashboard(models.Model):
         1. We invalidate the cache to force fresh computation
         2. We access all computed fields to trigger their @api.depends
         3. The form framework automatically refreshes fields marked as computed
-        4. We use the warning mechanism to ensure UI refresh
         
         This method is called by the form when any filter field is modified,
         ensuring all dependent KPIs, charts, and tables update immediately.
         """
-        # Critical: invalidate cache for this record to force fresh computation
-        self.invalidate_cache()
+        # Critical: invalidate environment cache to force fresh computation
+        self.env.invalidate_all()
         
         # Explicitly access computed fields to trigger their computation
         # This causes the @api.depends decorator to trigger _compute_* methods
@@ -984,14 +983,15 @@ class SalesInvoicingDashboard(models.Model):
                 else:
                     rec[field_name] = field_value
         
-        # Save the record - this persists the filter values
-        rec.flush()
+        # Save the record - this persists the filter values using write() method
+        write_vals = {field_name: filters_data[field_name] 
+                      for field_name in filters_data 
+                      if field_name in rec._fields}
+        if write_vals:
+            rec.write(write_vals)
         
         # Force cache invalidation to ensure fresh computation
-        self.env.cache.invalidate()
-        
-        # Recompute all dependent fields
-        rec.invalidate_cache()
+        self.env.invalidate_all()
         
         # Explicitly access computed fields to trigger their computation
         computed_data = {
