@@ -18,8 +18,16 @@ class SalesInvoicingDashboard(models.Model):
         'sale.order.type', string='Sales Order Types',
         help='Filter by one or more order types'
     )
-    booking_date_from = fields.Date(string='Booking Date From')
-    booking_date_to = fields.Date(string='Booking Date To')
+    booking_date_from = fields.Date(
+        string='Booking Date From',
+        default=lambda self: fields.Date.today().replace(month=1, day=1),
+        required=True
+    )
+    booking_date_to = fields.Date(
+        string='Booking Date To',
+        default=lambda self: fields.Date.today(),
+        required=True
+    )
     invoice_status_filter = fields.Selection(
         [
             ('all', 'All'),
@@ -27,7 +35,8 @@ class SalesInvoicingDashboard(models.Model):
             ('to invoice', 'Pending to Invoice'),
             ('invoiced', 'Fully Invoiced'),
         ],
-        string='Invoice Status'
+        string='Invoice Status',
+        default='all'
     )
     payment_status_filter = fields.Selection(
         [
@@ -37,7 +46,8 @@ class SalesInvoicingDashboard(models.Model):
             ('in_payment', 'In Payment'),
             ('paid', 'Paid'),
         ],
-        string='Payment Status'
+        string='Payment Status',
+        default='all'
     )
 
     # Additional recommended filters

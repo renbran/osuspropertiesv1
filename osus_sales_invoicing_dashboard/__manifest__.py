@@ -25,8 +25,9 @@
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
             # Custom assets
             'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
-            'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_filters.js',
+            'osus_sales_invoicing_dashboard/static/src/js/dashboard_form_controller.js',
+            'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
             'osus_sales_invoicing_dashboard/static/src/scss/dashboard_charts.scss',
         ],
     },
