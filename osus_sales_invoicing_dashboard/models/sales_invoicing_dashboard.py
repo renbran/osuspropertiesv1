@@ -175,6 +175,28 @@ class SalesInvoicingDashboard(models.Model):
             vals['payment_status_filter'] = 'all'
         return super(SalesInvoicingDashboard, self).create(vals)
 
+    def write(self, vals):
+        """
+        Override write to ensure computed fields are refreshed when filters change.
+        This handles cases where filters are updated programmatically or through
+        the UI in ways that might not trigger @api.onchange.
+        """
+        result = super(SalesInvoicingDashboard, self).write(vals)
+
+        # Check if any filter field was updated
+        filter_fields = {
+            'sales_order_type_id', 'sales_order_type_ids',
+            'booking_date_from', 'booking_date_to',
+            'invoice_status_filter', 'payment_status_filter',
+            'agent_partner_id', 'partner_id',
+        }
+
+        if any(field in vals for field in filter_fields):
+            # Invalidate cache to force fresh computation
+            self.env.invalidate_all()
+
+        return result
+
     @api.model
     def get_dashboard_singleton(self):
         """Return the singleton dashboard record, creating one if absent."""
@@ -182,6 +204,29 @@ class SalesInvoicingDashboard(models.Model):
         if not rec:
             rec = self.create({})
         return rec
+
+    def action_refresh_dashboard(self):
+        """
+        Manual refresh action for the dashboard.
+        This can be called from a button to force complete refresh of all data.
+        Returns an action to reload the current form view.
+        """
+        self.ensure_one()
+
+        # Force invalidate all cached data
+        self.env.invalidate_all()
+
+        # Clear the ormcache for order stats
+        self._get_cached_order_stats.clear_cache(self)
+
+        # Explicitly trigger recalculation of all computed fields
+        self._refresh_all_computed_fields()
+
+        # Return action to reload the form view
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
 
     @ormcache('self.id', 'date_from', 'date_to')
     def _get_cached_order_stats(self, date_from, date_to):
@@ -198,6 +243,40 @@ class SalesInvoicingDashboard(models.Model):
         count = sum(int(g.get('id_count', 0) or g.get('__count', 0) or 0) for g in groups)
         return {'amount_total': total, 'count': count}
 
+    def _refresh_all_computed_fields(self):
+        """
+        Helper method to force refresh all computed fields.
+        This explicitly invalidates cache and accesses all computed fields
+        to trigger their recalculation.
+        """
+        # Clear any cached computed field values to force recalculation
+        self.env.invalidate_all()
+
+        # Access metrics (KPIs) to trigger computation
+        _ = self.posted_invoice_count
+        _ = self.pending_to_invoice_order_count
+        _ = self.unpaid_invoice_count
+        _ = self.total_booked_sales
+        _ = self.total_invoiced_amount
+        _ = self.total_pending_amount
+        _ = self.amount_to_collect
+        _ = self.amount_collected
+        _ = self.commission_due
+
+        # Access chart fields to trigger computation
+        _ = self.chart_sales_by_type
+        _ = self.chart_booking_trend
+        _ = self.chart_payment_state
+        _ = self.chart_sales_funnel
+        _ = self.chart_top_customers
+        _ = self.chart_agent_performance
+
+        # Access table HTML fields to trigger computation
+        _ = self.table_order_type_html
+        _ = self.table_agent_commission_html
+        _ = self.table_detailed_orders_html
+        _ = self.table_invoice_aging_html
+
     @api.onchange(
         'sales_order_type_id',
         'sales_order_type_ids',
@@ -211,52 +290,22 @@ class SalesInvoicingDashboard(models.Model):
     def _onchange_filters(self):
         """
         Trigger recomputation of all computed fields when filters change.
-        
+
         In Odoo's form framework:
         1. @api.onchange is triggered when filter field changes
         2. Method runs in memory on the form (not saved to DB yet)
         3. Accessing computed fields triggers their @api.depends
         4. Form framework reads modified field values and updates UI
-        
+
         The key is that by accessing computed fields here, we trigger
         their recalculation with the new filter values, and the form
         automatically detects and displays the updated values.
+
+        IMPORTANT: This method is called every time a filter changes,
+        including when filters are reset to default values.
         """
-        # Step 1: Clear any cached computed field values to force recalculation
-        self.env.invalidate_all()
-        
-        # Step 2: Access each computed field - this triggers the @api.depends
-        # decorator and causes the _compute_* methods to run with current filter values.
-        # The form framework then detects these changes and updates the UI.
-        
-        # Access metrics (KPIs) to trigger computation
-        _ = self.posted_invoice_count
-        _ = self.pending_to_invoice_order_count
-        _ = self.unpaid_invoice_count
-        _ = self.total_booked_sales
-        _ = self.total_invoiced_amount
-        _ = self.total_pending_amount
-        _ = self.amount_to_collect
-        _ = self.amount_collected
-        _ = self.commission_due
-        
-        # Access chart fields to trigger computation
-        _ = self.chart_sales_by_type
-        _ = self.chart_booking_trend
-        _ = self.chart_payment_state
-        _ = self.chart_sales_funnel
-        _ = self.chart_top_customers
-        _ = self.chart_agent_performance
-        
-        # Access table HTML fields to trigger computation
-        _ = self.table_order_type_html
-        _ = self.table_agent_commission_html
-        _ = self.table_detailed_orders_html
-        _ = self.table_invoice_aging_html
-        
-        # After accessing all fields, Odoo's form framework automatically detects
-        # that computed fields have been accessed/modified and updates them in the UI.
-        # The values are now fresh based on the new filter values.
+        # Use the helper method to refresh all computed fields
+        self._refresh_all_computed_fields()
 
     @api.depends(
         'sales_order_type_id',
