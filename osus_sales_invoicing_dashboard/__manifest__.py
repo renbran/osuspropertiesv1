@@ -1,29 +1,20 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'OSUS Sales & Invoicing Dashboard',
-    'version': '17.0.2.0.0',
+    'version': '17.0.1.0.8',
     'category': 'Sales',
-    'summary': 'Real-time sales pipeline, invoicing, and collection analytics',
-    'description': '''
-        Enterprise Sales & Invoicing Dashboard
-        ========================================
-        * Real-time KPI tracking (8 key metrics)
-        * Interactive Chart.js visualizations (6 charts)
-        * Multi-dimensional filtering (7 independent filters)
-        * Detailed analysis tables (4 breakdowns)
-        * CSV data export (4 report types)
-        * Commission tracking for internal agents
-        * Invoice aging analysis by due date buckets
-        * Mobile-responsive Bootstrap 5 layout
-    ''',
+    'summary': 'Mini dashboard for invoicing KPIs and sale order tags.',
+    'description': (
+        'Provides a compact dashboard with clickable KPIs for posted '
+        'invoices, pending to invoice orders, and unpaid invoices. Also '
+        'adds helper badges/ribbons on sale orders to visualize invoicing '
+        'progress.'
+    ),
     'author': 'OSUS Properties',
     'license': 'LGPL-3',
     'depends': ['sale', 'account', 'le_sale_type', 'website', 'commission_ax'],
     'assets': {
         'web.assets_backend': [
-            # Chart.js from CDN (with fallback to local in JS)
-            'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
-            # Custom assets
             'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
             'osus_sales_invoicing_dashboard/static/src/js/dashboard_filters.js',

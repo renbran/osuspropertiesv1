@@ -14,6 +14,9 @@ class SalesInvoicingDashboard(models.Model):
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company, readonly=True)
 
     # Filters
+    sales_order_type_id = fields.Many2one(
+        'sale.order.type', string='Sales Order Type'
+    )
     sales_order_type_ids = fields.Many2many(
         'sale.order.type', string='Sales Order Types',
         help='Filter by one or more order types'
@@ -118,10 +121,12 @@ class SalesInvoicingDashboard(models.Model):
 
     def _get_order_domain(self):
         domain = [('state', 'in', ['sale', 'done'])]
-        # Filter by order types if specified
+        # Multi-select takes precedence if set
         # Important: Check .ids directly - empty recordset is still truthy!
         if self.sales_order_type_ids.ids:  # Check ids list, not recordset
             domain.append(('sale_order_type_id', 'in', self.sales_order_type_ids.ids))
+        elif self.sales_order_type_id:
+            domain.append(('sale_order_type_id', '=', self.sales_order_type_id.id))
         if self.invoice_status_filter and self.invoice_status_filter != 'all':
             domain.append(('invoice_status', '=', self.invoice_status_filter))
         if self.booking_date_from:
@@ -194,6 +199,7 @@ class SalesInvoicingDashboard(models.Model):
         return {'amount_total': total, 'count': count}
 
     @api.onchange(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -253,6 +259,7 @@ class SalesInvoicingDashboard(models.Model):
         # The values are now fresh based on the new filter values.
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -339,6 +346,7 @@ class SalesInvoicingDashboard(models.Model):
             rec.commission_due = commission_due_total
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -376,6 +384,7 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -425,6 +434,7 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -472,6 +482,7 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -500,6 +511,7 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -531,6 +543,7 @@ class SalesInvoicingDashboard(models.Model):
             }
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -618,6 +631,7 @@ class SalesInvoicingDashboard(models.Model):
         return f"{curr.symbol or ''}{amount:,.2f}"
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -683,6 +697,7 @@ class SalesInvoicingDashboard(models.Model):
             rec.table_order_type_html = ''.join(html)
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -746,6 +761,7 @@ class SalesInvoicingDashboard(models.Model):
             rec.table_agent_commission_html = ''.join(html)
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -827,6 +843,7 @@ class SalesInvoicingDashboard(models.Model):
             rec.table_detailed_orders_html = ''.join(html)
 
     @api.depends(
+        'sales_order_type_id',
         'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
@@ -926,6 +943,8 @@ class SalesInvoicingDashboard(models.Model):
             ('move_type', 'in', ['out_invoice', 'out_refund']),
         ]
         order_domain = [('state', 'in', ['sale', 'done'])]
+        if self.sales_order_type_id:
+            order_domain.append(('sale_order_type_id', '=', self.sales_order_type_id.id))
         if self.invoice_status_filter and self.invoice_status_filter != 'all':
             order_domain.append(('invoice_status', '=', self.invoice_status_filter))
         if self.booking_date_from:
@@ -949,6 +968,8 @@ class SalesInvoicingDashboard(models.Model):
             domain.append(('invoice_status', '=', 'to invoice'))
         else:
             domain.append(('invoice_status', '=', self.invoice_status_filter))
+        if self.sales_order_type_id:
+            domain.append(('sale_order_type_id', '=', self.sales_order_type_id.id))
         if self.booking_date_from:
             domain.append(('booking_date', '>=', self.booking_date_from))
         if self.booking_date_to:
