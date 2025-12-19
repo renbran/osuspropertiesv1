@@ -211,24 +211,24 @@ class SalesInvoicingDashboard(models.Model):
         """
         Trigger recomputation of all computed fields when filters change.
         
-        IMPORTANT: In Odoo, @api.onchange methods run in memory but the record
-        is not saved. To ensure computed fields are updated in the form:
+        In Odoo's form framework:
+        1. @api.onchange is triggered when filter field changes
+        2. Method runs in memory on the form (not saved to DB yet)
+        3. Accessing computed fields triggers their @api.depends
+        4. Form framework reads modified field values and updates UI
         
-        1. We invalidate the cache to force fresh computation
-        2. We access all computed fields to trigger their @api.depends
-        3. The form framework automatically refreshes fields marked as computed
-        
-        This method is called by the form when any filter field is modified,
-        ensuring all dependent KPIs, charts, and tables update immediately.
+        The key is that by accessing computed fields here, we trigger
+        their recalculation with the new filter values, and the form
+        automatically detects and displays the updated values.
         """
-        # Critical: invalidate environment cache to force fresh computation
+        # Step 1: Clear any cached computed field values to force recalculation
         self.env.invalidate_all()
         
-        # Explicitly access computed fields to trigger their computation
-        # This causes the @api.depends decorator to trigger _compute_* methods
-        # and ensures values are fresh from database
+        # Step 2: Access each computed field - this triggers the @api.depends
+        # decorator and causes the _compute_* methods to run with current filter values.
+        # The form framework then detects these changes and updates the UI.
         
-        # Access metrics to trigger computation
+        # Access metrics (KPIs) to trigger computation
         _ = self.posted_invoice_count
         _ = self.pending_to_invoice_order_count
         _ = self.unpaid_invoice_count
@@ -239,7 +239,7 @@ class SalesInvoicingDashboard(models.Model):
         _ = self.amount_collected
         _ = self.commission_due
         
-        # Access charts to trigger computation
+        # Access chart fields to trigger computation
         _ = self.chart_sales_by_type
         _ = self.chart_booking_trend
         _ = self.chart_payment_state
@@ -247,15 +247,15 @@ class SalesInvoicingDashboard(models.Model):
         _ = self.chart_top_customers
         _ = self.chart_agent_performance
         
-        # Access tables to trigger computation
+        # Access table HTML fields to trigger computation
         _ = self.table_order_type_html
         _ = self.table_agent_commission_html
         _ = self.table_detailed_orders_html
         _ = self.table_invoice_aging_html
         
-        # Note: Odoo's form framework automatically detects that computed fields
-        # have changed and refreshes them in the UI. We don't need to return
-        # anything special - the form will re-read all fields marked as @api.depends
+        # After accessing all fields, Odoo's form framework automatically detects
+        # that computed fields have been accessed/modified and updates them in the UI.
+        # The values are now fresh based on the new filter values.
 
     @api.depends(
         'sales_order_type_id',
