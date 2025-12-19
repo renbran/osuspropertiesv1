@@ -346,9 +346,13 @@ class SalesInvoicingDashboard(models.Model):
 
     @api.depends(
         'sales_order_type_id',
+        'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
         'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
     )
     def _compute_chart_sales_by_type(self):
         self.env.invalidate_all()
@@ -380,9 +384,13 @@ class SalesInvoicingDashboard(models.Model):
 
     @api.depends(
         'sales_order_type_id',
+        'sales_order_type_ids',
         'booking_date_from',
         'booking_date_to',
         'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
     )
     def _compute_chart_booking_trend(self):
         self.env.invalidate_all()
@@ -472,6 +480,16 @@ class SalesInvoicingDashboard(models.Model):
                 ],
             }
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_chart_sales_funnel(self):
         self.env.invalidate_all()
         for rec in self:
@@ -491,6 +509,16 @@ class SalesInvoicingDashboard(models.Model):
                 }],
             }
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_chart_top_customers(self):
         self.env.invalidate_all()
         for rec in self:
@@ -513,6 +541,16 @@ class SalesInvoicingDashboard(models.Model):
                 }],
             }
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_chart_agent_performance(self):
         self.env.invalidate_all()
         for rec in self:
@@ -591,6 +629,16 @@ class SalesInvoicingDashboard(models.Model):
         curr = self.env.company.currency_id
         return f"{curr.symbol or ''}{amount:,.2f}"
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_table_order_type_html(self):
         self.env.invalidate_all()
         for rec in self:
@@ -647,6 +695,16 @@ class SalesInvoicingDashboard(models.Model):
             html.insert(2, ''.join(footer))  # insert footer after thead for visibility
             rec.table_order_type_html = ''.join(html)
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_table_agent_commission_html(self):
         self.env.invalidate_all()
         for rec in self:
@@ -701,6 +759,16 @@ class SalesInvoicingDashboard(models.Model):
             html.insert(2, ''.join(footer))
             rec.table_agent_commission_html = ''.join(html)
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_table_detailed_orders_html(self):
         self.env.invalidate_all()
         today = fields.Date.context_today(self)
@@ -773,6 +841,16 @@ class SalesInvoicingDashboard(models.Model):
             html.insert(2, ''.join(footer))
             rec.table_detailed_orders_html = ''.join(html)
 
+    @api.depends(
+        'sales_order_type_id',
+        'sales_order_type_ids',
+        'booking_date_from',
+        'booking_date_to',
+        'invoice_status_filter',
+        'payment_status_filter',
+        'agent_partner_id',
+        'partner_id',
+    )
     def _compute_table_invoice_aging_html(self):
         self.env.invalidate_all()
         today = fields.Date.context_today(self)
