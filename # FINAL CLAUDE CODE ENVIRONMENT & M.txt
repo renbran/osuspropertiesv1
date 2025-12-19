@@ -1,0 +1,1715 @@
+```markdown
+# MASTER PROMPT: ODOO 17 SALES & INVOICING DASHBOARD - COMPLETE PRODUCTION BUILD
+
+## MISSION STATEMENT
+Build a **production-ready, enterprise-grade Sales & Invoicing Dashboard** for Odoo 17 that provides real-time KPI tracking, interactive visualizations, and comprehensive reporting. The module must be 100% functional, error-free, and ready for immediate deployment with 95%+ confidence level.
+
+---
+
+## CRITICAL CONTEXT
+
+### Current Situation
+- **Error:** KeyError: 'color' - attempting to access non-existent color field in sale.order.type
+- **Cause:** Browser/server cache containing old view definitions
+- **Impact:** Dashboard form fails to load, blocks all functionality
+- **Solution:** Complete rebuild with new view IDs, no color field references, and cache-busting strategy
+
+### Business Requirements
+- **Users:** C-level executives, sales managers, finance team
+- **Use Case:** Real-time monitoring of sales pipeline, invoicing status, payment collection, and agent commissions
+- **Data Sources:** sale.order, account.move, commission.line, res.partner
+- **Update Frequency:** Real-time (no stored computed fields)
+- **Export Format:** CSV for external analysis
+- **Mobile Support:** Fully responsive on tablets
+
+---
+
+## PROJECT STRUCTURE (EXACT HIERARCHY)
+
+```
+osus_sales_invoicing_dashboard/
+├── __init__.py                          # Module initialization
+├── __manifest__.py                      # Module metadata & dependencies
+├── README.md                            # Complete documentation
+│
+├── models/
+│   ├── __init__.py                      # Models initialization
+│   ├── sales_invoicing_dashboard.py    # Main dashboard model (500+ lines)
+│   └── sale_order.py                    # Sale order enhancements
+│
+├── views/
+│   ├── dashboard_views.xml              # Form + Kanban views (400+ lines)
+│   └── sale_order_views.xml             # Sale order tree/form inheritance
+│
+├── controllers/
+│   ├── __init__.py                      # Controllers initialization
+│   └── dashboard_export.py              # CSV export HTTP controller
+│
+├── security/
+│   └── ir.model.access.csv              # Access rights (3 user groups)
+│
+├── static/
+│   ├── description/
+│   │   └── icon.png                     # Module icon (placeholder)
+│   └── src/
+│       ├── js/
+│       │   └── dashboard_charts.js      # OWL Chart widget (150+ lines)
+│       ├── xml/
+│       │   └── dashboard_charts.xml     # Chart QWeb template
+│       └── scss/
+│           └── dashboard_charts.scss    # Professional styling (200+ lines)
+│
+└── tests/
+    ├── __init__.py                      # Tests initialization
+    └── test_dashboard.py                # Unit tests (90% coverage)
+```
+
+---
+
+## DETAILED SPECIFICATIONS
+
+### 1. __manifest__.py
+```python
+{
+    'name': 'OSUS Sales & Invoicing Dashboard',
+    'version': '17.0.2.0.0',  # CRITICAL: Version bump for cache clear
+    'category': 'Sales',
+    'summary': 'Real-time sales pipeline, invoicing, and collection analytics',
+    'description': '''
+        Enterprise Sales & Invoicing Dashboard
+        ========================================
+        * Real-time KPI tracking (8 key metrics)
+        * Interactive Chart.js visualizations (6 charts)
+        * Multi-dimensional filtering (8 independent filters)
+        * Detailed analysis tables (4 breakdowns)
+        * CSV data export (4 report types)
+        * Commission tracking for internal agents
+        * Invoice aging analysis by due date buckets
+        * Mobile-responsive Bootstrap 5 layout
+    ''',
+    'author': 'OSUS Properties',
+    'website': 'https://osusproperties.com',
+    'license': 'LGPL-3',
+    'depends': [
+        'sale',              # Sale orders
+        'account',           # Invoices
+        'le_sale_type',      # Order type field (booking_date, sale_order_type_id)
+        'website',           # Website layout templates
+        'commission_ax',     # Commission lines (agent1_partner_id)
+    ],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/dashboard_views.xml',
+        'views/sale_order_views.xml',
+    ],
+    'assets': {
+        'web.assets_backend': [
+            # Chart.js from CDN (with fallback to local)
+            'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+            # Custom assets
+            'osus_sales_invoicing_dashboard/static/src/xml/dashboard_charts.xml',
+            'osus_sales_invoicing_dashboard/static/src/js/dashboard_charts.js',
+            'osus_sales_invoicing_dashboard/static/src/scss/dashboard_charts.scss',
+        ],
+    },
+    'installable': True,
+    'application': False,
+    'auto_install': False,
+    'post_init_hook': 'post_init_hook',  # Clear caches on install
+}
+```
+
+### 2. Dashboard Model Requirements (sales_invoicing_dashboard.py)
+
+**Model Name:** `osus.sales.invoicing.dashboard`
+
+**Inheritance:** `models.Model` (persistent singleton)
+
+**SQL Constraint:** Only 1 record allowed (singleton pattern)
+
+#### Filter Fields (8 total)
+1. **booking_date_from** (Date, required)
+   - Default: First day of current month
+   - Help: "Start date for booking date filter"
+
+2. **booking_date_to** (Date, required)
+   - Default: Today
+   - Help: "End date for booking date filter"
+
+3. **sales_order_type_ids** (Many2many to sale.order.type)
+   - NO Many2one version
+   - NO color_field option
+   - Help: "Filter by one or more order types. Leave empty for all."
+
+4. **invoice_status_filter** (Selection, required)
+   - Options: all/no/to invoice/invoiced
+   - Default: 'all'
+   - Help: "Filter orders by invoicing status"
+
+5. **payment_status_filter** (Selection, required)
+   - Options: all/not_paid/partial/in_payment/paid
+   - Default: 'all'
+   - Help: "Filter invoices by payment state"
+
+6. **agent_partner_id** (Many2one to res.partner)
+   - Domain: [('is_company', '=', False)]
+   - Help: "Filter by internal sales agent (agent1_partner_id)"
+
+7. **partner_id** (Many2one to res.partner)
+   - Domain: [('customer_rank', '>', 0)]
+   - Help: "Filter by specific customer"
+
+8. **company_id** (Many2one to res.company)
+   - Default: self.env.company
+   - Help: "Filter by company (multi-company support)"
+
+#### KPI Fields (9 total, ALL store=False)
+1. **posted_invoice_count** (Integer) - Count of posted invoices
+2. **pending_to_invoice_order_count** (Integer) - Count of orders to invoice
+3. **unpaid_invoice_count** (Integer) - Count of unpaid invoices
+4. **total_booked_sales** (Monetary) - Sum of order amounts
+5. **total_pending_amount** (Monetary) - Sum of amount_to_invoice
+6. **total_invoiced_amount** (Monetary) - Sum of invoice amounts
+7. **amount_to_collect** (Monetary) - Sum of amount_residual
+8. **amount_collected** (Monetary) - Invoiced minus outstanding
+9. **commission_due** (Monetary) - Outstanding internal commissions
+
+#### Chart Data Fields (6 total, JSON type)
+1. **chart_sales_by_type** - Pie chart (sales by order type)
+2. **chart_booking_trend** - Line chart (monthly bookings)
+3. **chart_payment_state** - Doughnut chart (invoice payment states)
+4. **chart_sales_funnel** - Bar chart (booked → invoiced → collected)
+5. **chart_top_customers** - Bar chart (top 10 by outstanding)
+6. **chart_agent_performance** - Grouped bar (agent commissions)
+
+#### Table Data Fields (4 total, HTML type)
+1. **table_order_type_html** - Order type analysis with collection rates
+2. **table_agent_commission_html** - Agent commission breakdown
+3. **table_detailed_orders_html** - Last 50 orders with payment status
+4. **table_invoice_aging_html** - Invoice aging buckets (0-30, 31-60, 61-90, 90+)
+
+#### Core Methods
+
+**Domain Builders:**
+```python
+def _get_order_domain(self):
+    """
+    Build search domain for sale.order based on ALL 8 filters.
+    Returns: Odoo domain list
+    
+    Logic:
+    - Base: state in ('sale', 'done')
+    - Add booking_date_from/to if set
+    - Add sale_order_type_id in sales_order_type_ids.ids if set
+    - Add invoice_status = invoice_status_filter if not 'all'
+    - Add payment_state = payment_status_filter if not 'all'
+    - Add agent1_partner_id = agent_partner_id.id if set
+    - Add partner_id = partner_id.id if set
+    - Add company_id = company_id.id
+    - Log final domain for debugging
+    """
+
+def _get_invoice_domain(self, include_payment_filter=True, unpaid_only=False):
+    """
+    Build search domain for account.move based on filters.
+    Links invoices to filtered orders via line_ids.sale_line_ids.order_id.
+    
+    Parameters:
+    - include_payment_filter: Apply payment_status_filter
+    - unpaid_only: Force payment_state in ('not_paid', 'partial', 'in_payment')
+    
+    Returns: Odoo domain list
+    """
+```
+
+**Computation Methods:**
+```python
+@api.depends(
+    'booking_date_from', 'booking_date_to',
+    'sales_order_type_ids', 'invoice_status_filter',
+    'payment_status_filter', 'agent_partner_id',
+    'partner_id', 'company_id'
+)
+def _compute_metrics(self):
+    """
+    Main KPI computation triggered by any filter change.
+    
+    Steps:
+    1. Invalidate cache (self.env.invalidate_all())
+    2. Get filtered orders via _get_order_domain()
+    3. Calculate total_booked_sales (sum amount_total)
+    4. Get filtered invoices via _get_invoice_domain()
+    5. Calculate posted_invoice_count and total_invoiced_amount
+    6. Calculate pending orders (override invoice_status to 'to invoice' if 'all')
+    7. Calculate unpaid invoices and amount_to_collect
+    8. Calculate amount_collected (invoiced - outstanding)
+    9. Calculate commission_due from commission.line with currency conversion
+    10. Log all KPIs for debugging
+    11. Handle exceptions with default values (0)
+    """
+
+@api.depends([same 8 filter fields])
+def _compute_chart_sales_by_type(self):
+    """
+    Generate pie chart data for sales by order type.
+    Use read_group with groupby='sale_order_type_id'
+    Return JSON: {labels: [...], datasets: [{data: [...], backgroundColor: [...]}]}
+    """
+
+@api.depends([same 8 filter fields])
+def _compute_chart_booking_trend(self):
+    """
+    Generate line chart data for monthly booking trend.
+    Use read_group with groupby='booking_date:month', orderby='booking_date:month'
+    Return JSON with line chart config (tension: 0.4, fill: true)
+    """
+
+@api.depends([same 8 filter fields])
+def _compute_chart_payment_state(self):
+    """
+    Generate doughnut chart for invoice payment states.
+    Use read_group on account.move with groupby='payment_state'
+    Map technical names to user-friendly labels
+    Return JSON with 4 colors (red, orange, blue, green)
+    """
+
+def _compute_chart_sales_funnel(self):
+    """
+    Generate funnel bar chart: Booked → Invoiced → Collected.
+    Use already computed KPI values (total_booked_sales, etc.)
+    Return JSON with 3 data points and gradient colors
+    """
+
+def _compute_chart_top_customers(self):
+    """
+    Generate bar chart for top 10 customers by outstanding.
+    Use _get_invoice_domain(unpaid_only=True)
+    read_group with groupby='partner_id', orderby='amount_residual desc', limit=10
+    Return JSON with red color theme
+    """
+
+def _compute_chart_agent_performance(self):
+    """
+    Generate grouped bar chart for agent commission breakdown.
+    Query commission.line with commission_category='internal'
+    Group by partner_id, aggregate commission_amount and paid_amount
+    Calculate outstanding = commission_amount - paid_amount
+    Return JSON with 3 datasets (Total/Paid/Outstanding) in blue/green/red
+    """
+
+def _compute_table_order_type_html(self):
+    """
+    Generate HTML table with order type analysis.
+    
+    Columns:
+    - Order Type
+    - Order Count
+    - Total Sales
+    - To Invoice
+    - Invoiced
+    - Outstanding
+    - Collected
+    - Collection % (collected/invoiced * 100)
+    - Status (Good > 90%, Attention 70-90%, Critical < 70%)
+    
+    Include totals footer row.
+    Use Bootstrap classes: table table-sm table-striped table-hover
+    Format currency with _fmt_money() helper
+    """
+
+def _compute_table_agent_commission_html(self):
+    """
+    Generate HTML table with agent commission breakdown.
+    
+    Columns:
+    - Agent Name
+    - Commission Lines Count
+    - Total Commission Amount
+    - Paid Amount
+    - Outstanding Amount
+    - Status Badge (Paid/Partial/Pending)
+    
+    Include totals footer.
+    Use badge classes for status colors.
+    """
+
+def _compute_table_detailed_orders_html(self):
+    """
+    Generate HTML table with last 50 orders matching filters.
+    
+    Columns:
+    - Order Number
+    - Booking Date
+    - Order Type
+    - Customer
+    - Salesperson (agent1_partner_id)
+    - State
+    - Amount
+    - Invoiced Amount
+    - Outstanding Amount
+    - Invoice Status
+    - Payment Status (Paid/Pending/Overdue)
+    - Days Since Booking
+    - Action Required
+    
+    Order by: booking_date desc, id desc
+    Limit: 50 records
+    Calculate payment status: check invoice_date_due vs today
+    Show "Payment Overdue" if due date passed and amount_residual > 0
+    Include totals footer.
+    """
+
+def _compute_table_invoice_aging_html(self):
+    """
+    Generate HTML table with invoice aging analysis.
+    
+    Aging Buckets:
+    - Current (Not Due): due_date >= today OR due_date is null
+    - 1-30 Days: overdue 1-30 days
+    - 31-60 Days: overdue 31-60 days
+    - 61-90 Days: overdue 61-90 days
+    - 90+ Days Overdue: overdue > 90 days
+    
+    Columns:
+    - Aging Bucket
+    - Invoice Count
+    - Total Amount
+    - % of Total Outstanding
+    
+    Calculate days overdue: (today - invoice_date_due).days
+    Include totals footer (100.0%).
+    """
+
+@api.onchange(
+    'booking_date_from', 'booking_date_to',
+    'sales_order_type_ids', 'invoice_status_filter',
+    'payment_status_filter', 'agent_partner_id',
+    'partner_id', 'company_id'
+)
+def _onchange_filters(self):
+    """
+    Triggered on any filter change in UI.
+    Forces immediate recomputation (pass statement triggers @api.depends).
+    Log filter change event.
+    """
+```
+
+**Helper Methods:**
+```python
+def _fmt_money(self, amount):
+    """Format monetary amount with currency symbol and thousands separator."""
+    curr = self.company_currency_id
+    return f"{curr.symbol or '$'}{amount:,.2f}"
+
+def _get_order_type_rows(self):
+    """Build dataset for order type analysis table. Returns list of dicts."""
+```
+
+**Export Action Methods:**
+```python
+def action_export_order_types_csv(self):
+    """Return ir.actions.act_url pointing to /osus_dashboard/export/order_types"""
+
+def action_export_agent_commissions_csv(self):
+    """Return ir.actions.act_url pointing to /osus_dashboard/export/agent_commissions"""
+
+def action_export_detailed_orders_csv(self):
+    """Return ir.actions.act_url pointing to /osus_dashboard/export/detailed_orders"""
+
+def action_export_invoice_aging_csv(self):
+    """Return ir.actions.act_url pointing to /osus_dashboard/export/invoice_aging"""
+
+def _export_url(self, endpoint):
+    """Helper to generate export URL with dashboard record ID."""
+    return {
+        'type': 'ir.actions.act_url',
+        'url': f"/osus_dashboard/export/{endpoint}?rec_id={self.id}",
+        'target': 'self',
+    }
+```
+
+**Navigation Action Methods:**
+```python
+def action_open_posted_invoices(self):
+    """Open filtered list of posted invoices in account.move tree view."""
+
+def action_open_pending_orders(self):
+    """Open filtered list of orders to invoice in sale.order tree view."""
+
+def action_open_unpaid_invoices(self):
+    """Open filtered list of unpaid invoices in account.move tree view."""
+
+def action_open_sales_graph(self):
+    """Open sales graph view with filtered orders grouped by type."""
+
+def action_open_invoice_payment_graph(self):
+    """Open invoice graph view with filtered invoices grouped by payment state."""
+
+def action_open_booking_trend_graph(self):
+    """Open sales graph view with filtered orders grouped by month."""
+```
+
+**Lifecycle Hooks:**
+```python
+@api.model
+def create(self, vals):
+    """Set default filter values on creation. Enforce singleton constraint."""
+    if not vals.get('booking_date_from'):
+        vals['booking_date_from'] = date.today().replace(day=1)
+    if not vals.get('booking_date_to'):
+        vals['booking_date_to'] = date.today()
+    if not vals.get('invoice_status_filter'):
+        vals['invoice_status_filter'] = 'all'
+    if not vals.get('payment_status_filter'):
+        vals['payment_status_filter'] = 'all'
+    return super().create(vals)
+
+@api.model
+def default_get(self, fields_list):
+    """Provide default values for new records."""
+    defaults = super().default_get(fields_list)
+    defaults.update({
+        'booking_date_from': date.today().replace(day=1),
+        'booking_date_to': date.today(),
+        'invoice_status_filter': 'all',
+        'payment_status_filter': 'all',
+    })
+    return defaults
+```
+
+**Error Handling:**
+- Wrap ALL compute methods in try/except blocks
+- Log errors with _logger.error(msg, exc_info=True)
+- Set safe default values (0, [], {}) on exceptions
+- Never let compute method crash
+
+**Performance Optimization:**
+- Use read_group for aggregations instead of search + mapped
+- Batch currency conversions
+- Limit detailed queries (e.g., 50 orders)
+- Avoid N+1 queries with prefetch
+- Use invalidate_all() only once per computation cycle
+
+---
+
+### 3. Sale Order Enhancements (sale_order.py)
+
+**Model:** Inherit `sale.order`
+
+**Purpose:** Add pivot/graph-friendly fields
+
+**Fields:**
+```python
+invoice_progress = fields.Selection(
+    [('none', 'Not Invoiced'), ('partial', 'Pending to Invoice'), ('full', 'Fully Invoiced')],
+    string='Invoicing Progress',
+    compute='_compute_invoice_progress',
+    store=True,
+    help='Simplified badge for tree view decoration'
+)
+
+invoiced_amount = fields.Monetary(
+    string='Invoiced Amount',
+    compute='_compute_invoice_amounts',
+    store=True,
+    currency_field='currency_id',
+    help='Total amount of posted invoices'
+)
+
+outstanding_amount = fields.Monetary(
+    string='Outstanding Amount',
+    compute='_compute_invoice_amounts',
+    store=True,
+    currency_field='currency_id',
+    help='Total unpaid amount from invoices'
+)
+
+collected_amount = fields.Monetary(
+    string='Collected Amount',
+    compute='_compute_invoice_amounts',
+    store=True,
+    currency_field='currency_id',
+    help='Invoiced minus outstanding'
+)
+
+@api.depends('invoice_status')
+def _compute_invoice_progress(self):
+    """Map invoice_status to badge-friendly values."""
+    for order in self:
+        if order.invoice_status == 'invoiced':
+            order.invoice_progress = 'full'
+        elif order.invoice_status == 'to invoice':
+            order.invoice_progress = 'partial'
+        else:
+            order.invoice_progress = 'none'
+
+@api.depends('invoice_ids', 'invoice_ids.state', 'invoice_ids.amount_total', 
+             'invoice_ids.amount_residual', 'invoice_ids.payment_state')
+def _compute_invoice_amounts(self):
+    """Calculate invoice-related amounts for pivot analysis."""
+    for order in self:
+        invoices = order.invoice_ids.filtered(
+            lambda inv: inv.move_type == 'out_invoice' and inv.state == 'posted'
+        )
+        invoiced = sum(invoices.mapped('amount_total'))
+        outstanding = sum(invoices.mapped('amount_residual'))
+        
+        order.invoiced_amount = invoiced
+        order.outstanding_amount = outstanding
+        order.collected_amount = max(invoiced - outstanding, 0.0)
+```
+
+**View Inheritance:**
+- Add invoice_progress field to sale.order tree view after 'state'
+- Add widget="badge" for colored display
+- Add tree decorations: decoration-success, decoration-warning, decoration-danger
+- Add stat button in form view header for quick invoicing overview
+
+---
+
+### 4. Export Controller (dashboard_export.py)
+
+**Controller Class:** `DashboardExportController`
+
+**Inheritance:** `http.Controller`
+
+**Routes:**
+
+```python
+@http.route('/osus_dashboard/export/<string:export_type>', type='http', auth='user', csrf=True)
+def export_dashboard_data(self, export_type, rec_id=None, **kwargs):
+    """
+    Main export endpoint.
+    
+    Parameters:
+    - export_type: order_types | agent_commissions | detailed_orders | invoice_aging
+    - rec_id: Dashboard record ID (required)
+    
+    Returns: CSV file download
+    
+    HTTP Headers:
+    - Content-Type: text/csv; charset=utf-8
+    - Content-Disposition: attachment; filename="<report>_<timestamp>.csv"
+    
+    Error Handling:
+    - Return 404 if rec_id missing
+    - Return 500 with error message if exception occurs
+    - Log all errors
+    """
+
+def _export_order_types(self, dashboard):
+    """Generate CSV for order type analysis."""
+    
+def _export_agent_commissions(self, dashboard):
+    """Generate CSV for agent commission breakdown."""
+    
+def _export_detailed_orders(self, dashboard):
+    """Generate CSV for detailed orders list."""
+    
+def _export_invoice_aging(self, dashboard):
+    """Generate CSV for invoice aging buckets."""
+```
+
+**CSV Format:**
+- UTF-8 encoding
+- Comma-separated
+- Headers in first row
+- Monetary values formatted with 2 decimals
+- Dates in ISO format (YYYY-MM-DD)
+- Timestamps in filenames (YYYYMMDD_HHMMSS)
+
+**Example Export:**
+```csv
+Order Type,Count,Total Sales,To Invoice,Invoiced,Outstanding,Collected,Rate %,Status
+Residential Sale,45,1250000.00,50000.00,1200000.00,150000.00,1050000.00,87.5,Attention
+Commercial Lease,12,450000.00,0.00,450000.00,25000.00,425000.00,94.4,Good
+```
+
+---
+
+### 5. Chart Widget (dashboard_charts.js)
+
+**Component:** OWL Component
+
+**Registry:** fields category
+
+**Widget Name:** `osus_dashboard_chart`
+
+**Template:** `osus_sales_invoicing_dashboard.DashboardChart`
+
+**Props:**
+```javascript
+static props = {
+    value: { type: Object, optional: true },  // Chart data JSON
+    options: { type: Object, optional: true }  // Chart config (chartType, title)
+};
+```
+
+**State:**
+```javascript
+this.state = useState({
+    loading: true,      // Shows spinner
+    hasData: false,     // Shows chart or no-data message
+    error: null         // Shows error alert
+});
+```
+
+**Lifecycle:**
+```javascript
+setup() {
+    this.canvasRef = useRef('canvas');
+    this.chart = null;
+    
+    onMounted(() => this._renderChart());
+    onWillUpdateProps((nextProps) => this._renderChart(nextProps));
+    onWillUnmount(() => this._destroyChart());
+}
+```
+
+**Methods:**
+```javascript
+async _renderChart(nextProps) {
+    // 1. Show loading state
+    // 2. Validate data (labels, datasets)
+    // 3. Load Chart.js from CDN with fallback
+    // 4. Destroy existing chart
+    // 5. Create new Chart instance with config
+    // 6. Handle errors gracefully
+    // 7. Update state (loading=false, hasData=true/false)
+}
+
+_destroyChart() {
+    // Destroy Chart.js instance if exists
+    // Prevent memory leaks
+}
+
+async ensureChartLib() {
+    // Try CDN: https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js
+    // Fallback: /web/static/lib/Chart/Chart.js
+    // Return window.Chart or null
+}
+```
+
+**Chart.js Configuration:**
+```javascript
+{
+    type: chartType,  // bar, line, pie, doughnut
+    data: chartData,  // From field value
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 750, easing: 'easeInOutQuart' },
+        plugins: {
+            legend: { display: true, position: 'bottom', labels: { padding: 15, usePointStyle: true } },
+            title: { display: !!title, text: title, font: { size: 16, weight: 'bold' } },
+            tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                callbacks: {
+                    label: (context) => {
+                        // Format as currency with symbol
+                        return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+                    }
+                }
+            }
+        },
+        scales: chartType === 'bar' || chartType === 'line' ? {
+            x: { ticks: { autoSkip: true, maxRotation: 45 }, grid: { display: false } },
+            y: { 
+                beginAtZero: true, 
+                ticks: { callback: (value) => `$${value.toLocaleString()}` },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            }
+        } : {}
+    }
+}
+```
+
+**Error States:**
+- **Loading:** Show spinner with "Loading chart..." message
+- **No Data:** Show chart icon with "No data available for selected filters"
+- **Error:** Show warning alert with error message
+
+---
+
+### 6. Chart Template (dashboard_charts.xml)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="osus_sales_invoicing_dashboard.DashboardChart" owl="1">
+        <div class="o_osus_dashboard_chart" style="position: relative; width: 100%; height: 300px;">
+            
+            <!-- Loading State -->
+            <div t-if="state.loading" 
+                 class="o_chart_loading" 
+                 style="display: flex; align-items: center; justify-content: center; height: 100%; color: #3498db;">
+                <i class="fa fa-spinner fa-spin fa-2x"/>
+                <span class="ml-3">Loading chart...</span>
+            </div>
+            
+            <!-- Error State -->
+            <div t-if="state.error" 
+                 class="o_chart_error alert alert-warning m-3" 
+                 style="text-align: center;">
+                <i class="fa fa-exclamation-triangle fa-2x mb-2"/>
+                <p class="mb-0"><strong>Chart Error:</strong> <t t-esc="state.error"/></p>
+            </div>
+            
+            <!-- No Data State -->
+            <div t-if="!state.loading and !state.hasData and !state.error" 
+                 class="o_chart_no_data" 
+                 style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #999;">
+                <i class="fa fa-chart-bar fa-4x mb-3" style="opacity: 0.3;"/>
+                <p class="text-muted">No data available for selected filters</p>
+            </div>
+            
+            <!-- Chart Canvas -->
+            <canvas t-ref="canvas" 
+                    t-if="!state.loading and state.hasData"
+                    style="max-height: 300px; width: 100%;"/>
+        </div>
+    </t>
+</templates>
+```
+
+---
+
+### 7. Styling (dashboard_charts.scss)
+
+**Key Classes:**
+
+```scss
+// Chart Card Container
+.o_osus_chart_card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    
+    &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+}
+
+// Chart Title
+.o_osus_chart_title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+// Chart Container
+.o_osus_dashboard_chart {
+    min-height: 250px;
+    position: relative;
+    
+    canvas {
+        max-width: 100%;
+        height: auto !important;
+    }
+}
+
+// Loading Spinner
+.o_chart_loading {
+    animation: fadeIn 0.3s ease-in;
+}
+
+// Error Alert
+.o_chart_error {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+// No Data State
+.o_chart_no_data {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 8px;
+    padding: 40px;
+}
+
+// Table Styling
+.table-striped {
+    thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        
+        th {
+            border: none;
+            padding: 12px 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+    }
+    
+    tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    tfoot {
+        background-color: #f1f3f5;
+        font-weight: 700;
+        border-top: 2px solid #dee2e6;
+    }
+}
+
+// Badges
+.badge {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    
+    &.badge-success { background-color: #27ae60; }
+    &.badge-warning { background-color: #f39c12; }
+    &.badge-danger { background-color: #e74c3c; }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+    .o_osus_chart_card {
+        padding: 15px;
+    }
+    
+    .o_osus_dashboard_chart {
+        height: 250px !important;
+    }
+    
+    .table-striped {
+        font-size: 11px;
+        th, td { padding: 8px 4px; }
+    }
+}
+
+// Animations
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+```
+
+---
+
+### 8. Form View (dashboard_views.xml)
+
+**Record ID:** `view_osus_sales_invoicing_dashboard_form_v3` (v3 = cache clear)
+
+**Structure:**
+
+```xml
+<form string="Sales &amp; Invoicing Dashboard" create="false" delete="false">
+    <!-- Hidden Fields -->
+    <field name="name" invisible="1"/>
+    <field name="company_currency_id" invisible="1"/>
+    <field name="company_id" invisible="1"/>
+    
+    <!-- Header -->
+    <header>
+        <button name="%(action_osus_sales_invoicing_dashboard)d" 
+                string="Refresh Dashboard" 
+                type="action" 
+                class="btn-primary"
+                icon="fa-refresh"/>
+    </header>
+    
+    <sheet>
+        <!-- Title -->
+        <div class="oe_title">
+            <h1><i class="fa fa-dashboard"/> Sales &amp; Invoicing Dashboard</h1>
+        </div>
+        
+        <!-- Filter Section -->
+        <group string="📊 Filters">
+            <group>
+                <field name="booking_date_from" required="1"/>
+                <field name="booking_date_to" required="1"/>
+                <field name="invoice_status_filter"/>
+                <field name="payment_status_filter"/>
+            </group>
+            <group>
+                <field name="sales_order_type_ids" 
+                       widget="many2many_tags" 
+                       placeholder="All Order Types"
+                       options="{'no_create': True}"/>
+                <field name="agent_partner_id" placeholder="All Salespersons"/>
+                <field name="partner_id" placeholder="All Customers"/>
+            </group>
+        </group>
+        
+        <separator/>
+        
+        <!-- KPI Section -->
+        <group string="💰 Financial Summary">
+            <group string="Revenue Pipeline">
+                <field name="total_booked_sales" widget="monetary" readonly="1"/>
+                <field name="total_pending_amount" widget="monetary" readonly="1"/>
+                <field name="total_invoiced_amount" widget="monetary" readonly="1"/>
+            </group>
+            <group string="Collections">
+                <field name="amount_to_collect" widget="monetary" readonly="1"/>
+                <field name="amount_collected" widget="monetary" readonly="1"/>
+                <field name="commission_due" widget="monetary" readonly="1"/>
+            </group>
+        </group>
+        
+        <separator string="📈 Visual Analytics"/>
+        
+        <!-- Charts Section (Bootstrap Grid) -->
+        <div class="row">
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-filter"/> Sales Funnel
+                    </div>
+                    <field name="chart_sales_funnel" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'bar', 'title': ''}"/>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-line-chart"/> Booking Trend
+                    </div>
+                    <field name="chart_booking_trend" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'line', 'title': ''}"/>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-pie-chart"/> Sales by Type
+                    </div>
+                    <field name="chart_sales_by_type" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'pie', 'title': ''}"/>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-credit-card"/> Payment Status
+                    </div>
+                    <field name="chart_payment_state" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'doughnut', 'title': ''}"/>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-users"/> Top Customers
+                    </div>
+                    <field name="chart_top_customers" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'bar', 'title': ''}"/>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12">
+                <div class="o_osus_chart_card">
+                    <div class="o_osus_chart_title">
+                        <i class="fa fa-user-circle"/> Agent Performance
+                    </div>
+                    <field name="chart_agent_performance" 
+                           widget="osus_dashboard_chart"
+                           nolabel="1"
+                           options="{'chartType': 'bar', 'title': ''}"/>
+                </div>
+            </div>
+        </div>
+        
+        <separator string="📋 Detailed Analysis"/>
+        
+        <!-- Tables Section -->
+        <notebook>
+            <page string="Order Type Analysis" name="order_types">
+                <field name="table_order_type_html" widget="html" nolabel="1"/>
+            </page>
+            <page string="Agent Commissions" name="commissions">
+                <field name="table_agent_commission_html" widget="html" nolabel="1"/>
+            </page>
+            <page string="Detailed Orders" name="orders">
+                <field name="table_detailed_orders_html" widget="html" nolabel="1"/>
+            </page>
+            <page string="Invoice Aging" name="aging">
+                <field name="table_invoice_aging_html" widget="html" nolabel="1"/>
+            </page>
+        </notebook>
+        
+        <separator string="📥 Export Data"/>
+        
+        <!-- Export Buttons -->
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-2">
+                <button type="object" 
+                        name="action_export_order_types_csv"
+                        class="btn btn-secondary btn-block"
+                        icon="fa-download"
+                        string="Export Order Types"/>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-2">
+                <button type="object" 
+                        name="action_export_agent_commissions_csv"
+                        class="btn btn-secondary btn-block"
+                        icon="fa-download"
+                        string="Export Commissions"/>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-2">
+                <button type="object" 
+                        name="action_export_detailed_orders_csv"
+                        class="btn btn-secondary btn-block"
+                        icon="fa-download"
+                        string="Export Orders"/>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-2">
+                <button type="object" 
+                        name="action_export_invoice_aging_csv"
+                        class="btn btn-secondary btn-block"
+                        icon="fa-download"
+                        string="Export Aging"/>
+            </div>
+        </div>
+    </sheet>
+</form>
+```
+
+**Critical Requirements:**
+- ❌ **NO color_field option anywhere**
+- ❌ **NO Many2one sales_order_type_id field**
+- ✅ **Use Bootstrap grid: row, col-lg-6, col-md-12, col-12**
+- ✅ **All charts use widget="osus_dashboard_chart"**
+- ✅ **All monetary fields use widget="monetary"**
+- ✅ **All tables use widget="html" nolabel="1"**
+- ✅ **All chart options include chartType**
+- ✅ **View ID ends with _v3 for cache clear**
+
+---
+
+### 9. Kanban View (dashboard_views.xml)
+
+**Record ID:** `view_osus_sales_invoicing_dashboard_kanban_v3`
+
+**Purpose:** Quick glance overview with action buttons
+
+**Structure:**
+```xml
+<kanban class="o_kanban_dashboard">
+    <field name="booking_date_from"/>
+    <field name="booking_date_to"/>
+    <field name="posted_invoice_count"/>
+    <field name="pending_to_invoice_order_count"/>
+    <field name="unpaid_invoice_count"/>
+    
+    <templates>
+        <t t-name="kanban-box">
+            <div class="oe_kanban_card">
+                <div class="o_kanban_content">
+                    <h4>Dashboard Overview</h4>
+                    <p class="text-muted">
+                        <t t-esc="record.booking_date_from.value"/> — 
+                        <t t-esc="record.booking_date_to.value"/>
+                    </p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12 mb-2">
+                            <button type="object" 
+                                    name="action_open_posted_invoices" 
+                                    class="btn btn-primary btn-sm btn-block">
+                                Posted Invoices: <t t-esc="record.posted_invoice_count.value"/>
+                            </button>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <button type="object" 
+                                    name="action_open_pending_orders" 
+                                    class="btn btn-info btn-sm btn-block">
+                                To Invoice: <t t-esc="record.pending_to_invoice_order_count.value"/>
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button type="object" 
+                                    name="action_open_unpaid_invoices" 
+                                    class="btn btn-danger btn-sm btn-block">
+                                Unpaid: <t t-esc="record.unpaid_invoice_count.value"/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </templates>
+</kanban>
+```
+
+---
+
+### 10. Action & Menus (dashboard_views.xml)
+
+```xml
+<!-- Singleton Record -->
+<record id="osus_sales_invoicing_dashboard_record" model="osus.sales.invoicing.dashboard"/>
+
+<!-- Action -->
+<record id="action_osus_sales_invoicing_dashboard" model="ir.actions.act_window">
+    <field name="name">Sales &amp; Invoicing Dashboard</field>
+    <field name="res_model">osus.sales.invoicing.dashboard</field>
+    <field name="view_mode">form,kanban</field>
+    <field name="view_id" ref="view_osus_sales_invoicing_dashboard_form_v3"/>
+    <field name="res_id" ref="osus_sales_invoicing_dashboard_record"/>
+    <field name="context">{'form_view_initial_mode': 'edit'}</field>
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            Sales &amp; Invoicing Dashboard
+        </p>
+        <p>
+            Monitor your sales pipeline, invoicing status, and collection performance in real-time.
+        </p>
+    </field>
+</record>
+
+<!-- Menu under Sales -->
+<menuitem id="menu_osus_sales_invoicing_dashboard" 
+          name="Sales Dashboard"
+          parent="sale.sale_menu_root"
+          action="action_osus_sales_invoicing_dashboard" 
+          sequence="10"/>
+
+<!-- Menu under Settings > Technical -->
+<menuitem id="menu_osus_sales_invoicing_dashboard_technical" 
+          name="Sales Dashboard"
+          parent="base.menu_custom"
+          action="action_osus_sales_invoicing_dashboard" 
+          sequence="90"/>
+```
+
+---
+
+### 11. Security (ir.model.access.csv)
+
+```csv
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_osus_dashboard_user,Dashboard User Access,model_osus_sales_invoicing_dashboard,base.group_user,1,1,1,0
+access_osus_dashboard_manager,Dashboard Manager Access,model_osus_sales_invoicing_dashboard,sales_team.group_sale_manager,1,1,1,1
+access_osus_dashboard_portal,Dashboard Portal Access,model_osus_sales_invoicing_dashboard,base.group_portal,1,0,0,0
+```
+
+**Access Rules:**
+- **Users:** Read + Write + Create (no delete to preserve singleton)
+- **Sales Managers:** Full access including delete
+- **Portal Users:** Read-only access
+
+---
+
+### 12. Tests (test_dashboard.py)
+
+```python
+from odoo.tests import TransactionCase
+from datetime import date, timedelta
+
+class TestSalesInvoicingDashboard(TransactionCase):
+    
+    def setUp(self):
+        super().setUp()
+        self.Dashboard = self.env['osus.sales.invoicing.dashboard']
+        self.SaleOrder = self.env['sale.order']
+        self.partner = self.env['res.partner'].create({'name': 'Test Customer'})
+    
+    def test_dashboard_singleton(self):
+        """Test only one dashboard record can exist."""
+        dash1 = self.Dashboard.create({})
+        self.assertEqual(self.Dashboard.search_count([]), 1)
+    
+    def test_default_dates(self):
+        """Test default date filters."""
+        dash = self.Dashboard.create({})
+        today = date.today()
+        first_of_month = today.replace(day=1)
+        self.assertEqual(dash.booking_date_from, first_of_month)
+        self.assertEqual(dash.booking_date_to, today)
+    
+    def test_filter_domain_builder(self):
+        """Test _get_order_domain builds correct domain."""
+        dash = self.Dashboard.create({
+            'booking_date_from': date(2024, 1, 1),
+            'booking_date_to': date(2024, 1, 31),
+            'invoice_status_filter': 'to invoice'
+        })
+        domain = dash._get_order_domain()
+        self.assertIn(('booking_date', '>=', date(2024, 1, 1)), domain)
+        self.assertIn(('booking_date', '<=', date(2024, 1, 31)), domain)
+        self.assertIn(('invoice_status', '=', 'to invoice'), domain)
+    
+    def test_metrics_computation(self):
+        """Test KPI metrics compute correctly."""
+        dash = self.Dashboard.create({})
+        order = self.SaleOrder.create({
+            'partner_id': self.partner.id,
+            'booking_date': date.today(),
+        })
+        order.action_confirm()
+        
+        dash.invalidate_cache()
+        self.assertGreater(dash.total_booked_sales, 0)
+    
+    def test_export_url_generation(self):
+        """Test export action methods return correct URLs."""
+        dash = self.Dashboard.create({})
+        result = dash.action_export_order_types_csv()
+        self.assertEqual(result['type'], 'ir.actions.act_url')
+        self.assertIn('/osus_dashboard/export/order_types', result['url'])
+    
+    def test_chart_data_structure(self):
+        """Test chart JSON has required structure."""
+        dash = self.Dashboard.create({})
+        self.assertIn('labels', dash.chart_sales_funnel)
+        self.assertIn('datasets', dash.chart_sales_funnel)
+```
+
+---
+
+### 13. README.md
+
+```markdown
+# OSUS Sales & Invoicing Dashboard
+
+## Overview
+Enterprise-grade dashboard for real-time monitoring of sales pipeline, invoicing status, payment collection, and agent commissions.
+
+## Features
+- **8 Real-Time KPIs:** Booked sales, invoiced, collected, outstanding, commissions
+- **6 Interactive Charts:** Funnel, trend, type breakdown, payment status, top customers, agent performance
+- **4 Analysis Tables:** Order types, agent commissions, detailed orders, invoice aging
+- **8 Filter Dimensions:** Date range, order type, customer, salesperson, invoice status, payment status, company
+- **4 CSV Exports:** Order types, commissions, orders, aging
+- **Drill-Down Navigation:** Click KPIs to open filtered lists
+- **Mobile Responsive:** Bootstrap 5 grid layout
+
+## Installation
+
+### Prerequisites
+- Odoo 17.0+
+- Python 3.10+
+- PostgreSQL 13+
+- Modules: sale, account, le_sale_type, website, commission_ax
+
+### Steps
+1. Copy module to addons directory:
+   ```bash
+   cp -r osus_sales_invoicing_dashboard /path/to/odoo/addons/
+   ```
+
+2. Set permissions:
+   ```bash
+   sudo chown -R odoo:odoo osus_sales_invoicing_dashboard
+   sudo chmod -R 755 osus_sales_invoicing_dashboard
+   ```
+
+3. Update module list:
+   ```bash
+   odoo-bin -c odoo.conf -d your_database -u all --stop-after-init
+   ```
+
+4. Install module:
+   - Web UI: Apps → Search "OSUS" → Install
+   - Command line:
+     ```bash
+     odoo-bin -c odoo.conf -d your_database -i osus_sales_invoicing_dashboard --stop-after-init
+     ```
+
+5. Restart Odoo:
+   ```bash
+   sudo systemctl restart odoo
+   ```
+
+## Usage
+
+### Accessing Dashboard
+**Sales → Sales Dashboard** or **Settings → Technical → Sales Dashboard**
+
+### Using Filters
+1. **Date Range:** Select booking date range (defaults to current month)
+2. **Order Types:** Select one or more types (or leave empty for all)
+3. **Customer:** Filter by specific customer
+4. **Salesperson:** Filter by internal sales agent
+5. **Invoice Status:** All / Not Invoiced / To Invoice / Fully Invoiced
+6. **Payment Status:** All / Not Paid / Partially Paid / In Payment / Paid
+7. Click **Refresh Dashboard** to apply filters
+
+### Interpreting KPIs
+- **Total Booked Sales:** Sum of confirmed/done orders in date range
+- **Pending to Invoice:** Orders with invoice_status = "to invoice"
+- **Total Invoiced:** Posted customer invoice amounts
+- **Outstanding:** Unpaid invoice balances (amount_residual)
+- **Collected:** Invoiced minus outstanding
+- **Commission Due:** Unpaid internal agent commissions
+
+### Exporting Data
+Click export buttons at bottom of form to download CSV files with current filters applied.
+
+### Navigation
+Click KPI values or action buttons to open filtered Odoo list views for detailed analysis.
+
+## Technical Details
+
+### Models
+- `osus.sales.invoicing.dashboard` - Main dashboard model
+- `sale.order` - Enhanced with invoice amounts
+
+### Controllers
+- `/osus_dashboard/export/<type>` - CSV export endpoint
+
+### Widgets
+- `osus_dashboard_chart` - OWL Chart.js component
+
+### Dependencies
+- Chart.js 4.4.0 (loaded from CDN)
+- Bootstrap 5 grid
+- Font Awesome icons
+
+## Configuration
+
+### Multi-Company
+Dashboard automatically filters by current company. Switch company context to view different company data.
+
+### Commission Tracking
+Requires `commission_ax` module with internal commissions configured.
+
+### Date Fields
+Dashboard uses `booking_date` field from `le_sale_type` module. Ensure your sales orders have this field populated.
+
+## Troubleshooting
+
+### Charts Not Rendering
+- Check browser console for JavaScript errors
+- Verify Chart.js CDN is accessible: https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js
+- Clear browser cache (Ctrl+Shift+Delete)
+
+### Filters Not Working
+- Check Odoo logs: `tail -f /var/log/odoo/odoo-server.log`
+- Verify database connection
+- Restart Odoo server
+
+### Export Fails
+- Check controller route is accessible: `/osus_dashboard/export/order_types?rec_id=1`
+- Verify user has access rights
+- Check server logs for Python exceptions
+
+### Performance Issues
+- Dashboard computes all metrics real-time (no caching)
+- For large datasets (10,000+ orders), consider:
+  - Narrower date range filter
+  - Specific order type filter
+  - Database indexing on booking_date field
+
+## Support
+- **Developer:** OSUS Properties IT Team
+- **Email:** dev@osusproperties.com
+- **Documentation:** https://docs.osusproperties.com/dashboard
+
+## License
+LGPL-3
+
+## Changelog
+
+### Version 17.0.2.0.0 (2024-12-19)
+- Complete rebuild with production-ready code
+- Fixed: color field error
+- Fixed: duplicate header blocks
+- Fixed: stored computed fields causing stale data
+- Added: Comprehensive error handling
+- Added: Performance optimizations
+- Added: Mobile responsive layout
+- Added: 90% test coverage
+
+### Version 17.0.1.0.0 (Initial)
+- First release
+```
+
+---
+
+## CODE QUALITY STANDARDS
+
+### Python (PEP8 Compliant)
+- Line length: 120 characters max
+- Indentation: 4 spaces
+- Imports: stdlib, odoo, local (separated by blank lines)
+- Docstrings: All methods (Google style)
+- Type hints: Where applicable
+- Logging: Use _logger.info/warning/error
+- Error handling: try/except with logging
+- No bare excepts: catch specific exceptions
+- Constants: UPPERCASE_WITH_UNDERSCORES
+- Private methods: _leading_underscore
+
+### JavaScript (ES6+)
+- Use async/await (no callbacks)
+- Use const/let (no var)
+- Arrow functions preferred
+- Template literals for strings
+- Destructuring where applicable
+- Error handling: try/catch
+- Comments: JSDoc style
+- Semicolons: Always
+
+### XML
+- Valid XML (xmllint check)
+- Proper indentation (4 spaces)
+- Attributes on separate lines if > 3
+- Close all tags
+- Use CDATA for special characters
+- Comments: <!-- Clear descriptions -->
+
+### SCSS
+- Nesting: Max 3 levels
+- Variables: $descriptive-name
+- BEM naming: .block__element--modifier
+- Vendor prefixes: Use autoprefixer
+- Comments: // For single line, /* */ for blocks
+
+---
+
+## CRITICAL FIXES VERIFICATION
+
+### ✅ MUST VERIFY BEFORE GENERATING CODE
+
+1. **NO color_field references**
+   - Search entire codebase for "color_field"
+   - Must return 0 results
+
+2. **NO sales_order_type_id Many2one**
+   - Only sales_order_type_ids Many2many exists
+   - Search for "Many2one('sale.order.type')" in dashboard model
+   - Must return 0 results
+
+3. **All view IDs end with _v3**
+   - view_osus_sales_invoicing_dashboard_form_v3
+   - view_osus_sales_invoicing_dashboard_kanban_v3
+
+4. **All computed fields store=False**
+   - Search for "store=True" in dashboard model
+   - Only allowed in sale_order.py enhancements
+
+5. **Complete @api.depends decorators**
+   - All 8 filter fields in every compute method
+   - booking_date_from, booking_date_to, sales_order_type_ids, 
+     invoice_status_filter, payment_status_filter, agent_partner_id, 
+     partner_id, company_id
+
+6. **Chart.js in assets**
+   - CDN URL in __manifest__.py
+   - Fallback in JS code
+
+7. **Bootstrap grid classes**
+   - Use row, col-lg-6, col-md-12, col-12
+   - NO custom o_col_6 classes
+
+8. **Export controller routes**
+   - /osus_dashboard/export/<type>
+   - Returns CSV with Content-Disposition header
+
+9. **Security access rights**
+   - 3 groups defined in ir.model.access.csv
+
+10. **Tests included**
+    - test_dashboard.py with 90%+ coverage
+
+---
+
+## DEPLOYMENT CHECKLIST
+
+### Pre-Deployment
+- [ ] All Python files pass `python -m py_compile`
+- [ ] All XML files pass `xmllint --noout`
+- [ ] All JS files pass `eslint`
+- [ ] Search codebase: "color_field" returns 0 results
+- [ ] Search codebase: "store=True" in dashboard model returns 0 results
+- [ ] View IDs all end with _v3
+- [ ] __manifest__.py version is 17.0.2.0.0
+- [ ] All 8 filter fields in @api.depends
+- [ ] Chart.js CDN in assets
+- [ ] Export controller implemented
+- [ ] Security rules defined
+- [ ] Tests pass with 90%+ coverage
+- [ ] README complete
+
+### Deployment
+- [ ] Backup existing module
+- [ ] Backup database
+- [ ] Copy new module to addons
+- [ ] Set correct permissions (odoo:odoo, 755)
+- [ ] Stop Odoo service
+- [ ] Clear view cache: `DELETE FROM ir_ui_view WHERE model = 'osus.sales.invoicing.dashboard';`
+- [ ] Upgrade module: `odoo-bin -u osus_sales_invoicing_dashboard --stop-after-init`
+- [ ] Start Odoo service
+- [ ] Clear browser cache (Ctrl+Shift+Delete)
+- [ ] Test in incognito mode
+
+### Post-Deployment Verification
+- [ ] Dashboard form loads < 2 seconds
+- [ ] No errors in odoo.log
+- [ ] All 6 charts render without errors
+- [ ] Filter changes update KPIs instantly
+- [ ] All 4 tables populate with data
+- [ ] CSV exports download successfully
+- [ ] Mobile layout responsive
+- [ ] No browser console errors
+
+---
+
+## SUCCESS CRITERIA
+
+### Performance Metrics
+- **Dashboard Load Time:** < 2 seconds
+- **Chart Render Time:** < 500ms each
+- **Filter Response Time:** < 300ms
+- **Export Generation:** < 5 seconds
+- **Concurrent Users:** Support 50+ simultaneous users
+
+### Reliability Metrics
+- **Error Rate:** < 0.5% (1 error per 200 requests)
+- **Uptime:** 99.9%
+- **Data Accuracy:** 100% match with Odoo native reports
+- **Browser Support:** Latest 2 versions of Chrome/Firefox/Safari/Edge
+
+### Code Quality Metrics
+- **Test Coverage:** 90%+
+- **Code Review:** Pass peer review checklist
+- **Documentation:** 100% of public methods documented
+- **Security:** Pass OWASP Top 10 checks
+
+---
+
+## FINAL INSTRUCTIONS
+
+### Generate Complete Module
+1. Create ALL files in exact structure specified
+2. Use COMPLETE code (no placeholders or TODOs)
+3. Include ALL methods described in specifications
+4. Add comprehensive error handling everywhere
+5. Add logging statements for debugging
+6. Format code according to quality standards
+7. Verify all critical fixes applied
+8. Include docstrings for all methods
+9. Add inline comments for complex logic
+10. Test data generation helpers in comments
+
+### Code Organization
+- Start with __manifest__.py
+- Then __init__.py files
+- Then models (dashboard first, then sale_order)
+- Then views (dashboard_views.xml first)
+- Then controllers
+- Then security
+- Then static assets (JS, XML, SCSS)
+- Then tests
+- End with README.md
+
+### Output Format
+For each file, provide:
+```
+## File: path/to/file.py
+
+```python
+# Complete code here
+```
+
+**Description:** Brief explanation of file purpose
+**Key Methods:** List of main methods/classes
+**Dependencies:** External dependencies used
+```
+
+---
+
+## BEGIN CODE GENERATION NOW
+
+Generate the complete, production-ready Odoo 17 Sales & Invoicing Dashboard module following ALL specifications above. Start with __manifest__.py and proceed through the entire project structure systematically.
+```
+
+---
+
+## **PART 3: USAGE INSTRUCTIONS**
+
+### **How to Use This Setup**
+
+1. **Copy Part 1 (Environment)** into Claude Code environment variables section
+
+2. **Copy Part 2 (Master Prompt)** into Claude Code main prompt window
+
+3. **Let Claude Code Generate** all files automatically
+
+4. **Review Generated Files** for:
+   - No syntax errors
+   - No "color_field" references
+   - All view IDs use v3 suffix
+   - Complete error handling
+
+5. **Deploy to Odoo:**
+   ```bash
+   # Navigate to addons
+   cd /var/odoo/osusproperties/addons
+   
+   # Backup existing module
+   cp -r osus_sales_invoicing_dashboard osus_sales_invoicing_dashboard.backup
+   
+   # Remove old version
+   rm -rf osus_sales_invoicing_dashboard
+   
+   # Copy Claude Code output
+   cp -r /path/to/claude/output/osus_sales_invoicing_dashboard .
+   
+   # Set permissions
+   sudo chown -R odoo:odoo osus_sales_invoicing_dashboard
+   sudo chmod -R 755 osus_sales_invoicing_dashboard
+   
+   # Clear database cache
+   psql -U odoo -d your_database << EOF
+   DELETE FROM ir_ui_view WHERE model = 'osus.sales.invoicing.dashboard';
+   DELETE FROM ir_model_data WHERE module = 'osus_sales_invoicing_dashboard' AND model = 'ir.ui.view';
+   VACUUM ANALYZE;
+   EOF
+   
+   # Upgrade module
+   sudo systemctl stop odoo
+   /var/odoo/osusproperties/src/odoo-bin -c /etc/odoo/odoo.conf -d your_database -u osus_sales_invoicing_dashboard --stop-after-init
+   sudo systemctl start odoo
+   
+   # Clear browser cache
+   # Ctrl+Shift+Delete → Clear cached images and files
+   
+   # Test in incognito mode
+   # Navigate to Sales → Sales Dashboard
+   ```
+
+6. **Verify Success:**
+   - ✅ Dashboard form opens immediately
+   - ✅ All 6 charts render without errors
+   - ✅ Filter changes update KPIs instantly
+   - ✅ Tables display formatted data
+   - ✅ Export buttons download CSVs
+   - ✅ No errors in odoo.log
+   - ✅ No errors in browser console
+
+---
+
+**This is the complete, final, production-ready setup. Copy and paste into Claude Code exactly as shown.** 🚀
