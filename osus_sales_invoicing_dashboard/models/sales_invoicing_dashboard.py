@@ -1084,7 +1084,7 @@ class SalesInvoicingDashboard(models.Model):
         """
         API endpoint for frontend to update filters and get refreshed data.
         This ensures filters are properly saved and all computed fields are updated.
-        
+
         Args:
             filters_data: dict with filter field names and values
                 {
@@ -1094,33 +1094,46 @@ class SalesInvoicingDashboard(models.Model):
                     'invoice_status_filter': 'to invoice',
                     ...
                 }
-        
+
         Returns:
             dict with updated field values for the dashboard
         """
         rec = self.get_dashboard_singleton()
-        
-        # Update filter fields with provided values
+
+        # Prepare write values, handling different field types properly
+        write_vals = {}
         for field_name, field_value in filters_data.items():
-            if hasattr(rec, field_name) and field_name in rec._fields:
-                field = rec._fields[field_name]
-                # Handle many2many fields specially
-                if field.type == 'many2many':
-                    if isinstance(field_value, list):
-                        rec[field_name] = [(6, 0, field_value)]  # Replace all
+            if field_name not in rec._fields:
+                continue
+
+            field = rec._fields[field_name]
+
+            # Handle many2many fields with proper Odoo command syntax
+            if field.type == 'many2many':
+                if isinstance(field_value, list):
+                    write_vals[field_name] = [(6, 0, field_value)]  # Replace all
                 else:
-                    rec[field_name] = field_value
-        
-        # Save the record - this persists the filter values using write() method
-        write_vals = {field_name: filters_data[field_name] 
-                      for field_name in filters_data 
-                      if field_name in rec._fields}
+                    write_vals[field_name] = [(6, 0, [])]  # Clear if not a list
+            # Handle many2one fields
+            elif field.type == 'many2one':
+                write_vals[field_name] = field_value if field_value else False
+            # Handle other field types (dates, selection, etc.)
+            else:
+                write_vals[field_name] = field_value
+
+        # Save the record - this persists the filter values
         if write_vals:
             rec.write(write_vals)
-        
+            # Commit to ensure values are persisted
+            self.env.cr.commit()
+
         # Force cache invalidation to ensure fresh computation
         self.env.invalidate_all()
-        
+
+        # Clear ormcache for order stats
+        if hasattr(rec, '_get_cached_order_stats'):
+            rec._get_cached_order_stats.clear_cache(rec)
+
         # Explicitly access computed fields to trigger their computation
         computed_data = {
             'posted_invoice_count': rec.posted_invoice_count,
@@ -1143,5 +1156,5 @@ class SalesInvoicingDashboard(models.Model):
             'table_detailed_orders_html': rec.table_detailed_orders_html,
             'table_invoice_aging_html': rec.table_invoice_aging_html,
         }
-        
+
         return computed_data
