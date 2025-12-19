@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Dashboard record to have a singleton -->
-    <record id="osus_sales_invoicing_dashboard_record" model="osus.sales.invoicing.dashboard"/>
+    <!-- Initialize with default filter values to ensure data loads immediately -->
+    <record id="osus_sales_invoicing_dashboard_record" model="osus.sales.invoicing.dashboard">
+        <field name="booking_date_from" eval="(datetime.now().replace(day=1)).strftime('%Y-%m-%d')"/>
+        <field name="booking_date_to" eval="datetime.now().strftime('%Y-%m-%d')"/>
+        <field name="invoice_status_filter">all</field>
+        <field name="payment_status_filter">all</field>
+    </record>
 
     <!-- Form view with enhanced dashboard -->
     <record id="view_osus_sales_invoicing_dashboard_form" model="ir.ui.view">
