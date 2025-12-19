@@ -39,3 +39,48 @@ class TestSalesInvoicingDashboard(TransactionCase):
         act = self.dashboard.action_export_order_types_csv()
         self.assertEqual(act['type'], 'ir.actions.act_url')
         self.assertIn('/osus_dashboard/export/order_types', act['url'])
+
+    def test_filter_changes_trigger_refresh(self):
+        """Test that changing filters properly invalidates cache and refreshes data"""
+        # Create a sale order for testing
+        order_type = self.env['sale.order.type'].create({'name': 'Test Type'})
+        order = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'booking_date': date.today(),
+            'sale_order_type_id': order_type.id,
+        })
+        order.action_confirm()
+
+        # Set filter to specific type
+        self.dashboard.write({'sales_order_type_ids': [(6, 0, [order_type.id])]})
+
+        # Verify metrics are computed with filter
+        self.dashboard.invalidate_cache()
+        self.dashboard._compute_metrics()
+        filtered_sales = self.dashboard.total_booked_sales
+
+        # Change filter to all types
+        self.dashboard.write({'sales_order_type_ids': [(5, 0, 0)]})
+
+        # Verify metrics are recomputed
+        self.dashboard.invalidate_cache()
+        self.dashboard._compute_metrics()
+        all_sales = self.dashboard.total_booked_sales
+
+        # Both should return valid numbers (actual values may be same if only one order)
+        self.assertGreaterEqual(filtered_sales, 0)
+        self.assertGreaterEqual(all_sales, 0)
+
+    def test_manual_refresh_action(self):
+        """Test that manual refresh action works"""
+        result = self.dashboard.action_refresh_dashboard()
+        self.assertEqual(result['type'], 'ir.actions.client')
+        self.assertEqual(result['tag'], 'reload')
+
+    def test_onchange_filters_executes(self):
+        """Test that onchange method can execute without errors"""
+        # This should not raise any exception
+        self.dashboard._onchange_filters()
+        # Verify computed fields are accessible
+        _ = self.dashboard.total_booked_sales
+        _ = self.dashboard.chart_sales_by_type

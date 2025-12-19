@@ -13,7 +13,7 @@
                 <field name="company_currency_id" invisible="1"/>
                 <field name="sales_order_type_id" invisible="1"/>
                 <header>
-                    <button name="%(action_osus_sales_invoicing_dashboard)d" string="Refresh Dashboard" type="action" class="btn-primary" icon="fa-refresh"/>
+                    <button name="action_refresh_dashboard" string="Refresh Dashboard" type="object" class="btn-primary" icon="fa-refresh"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
