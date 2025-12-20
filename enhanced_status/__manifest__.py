@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sale Order Enhanced Workflow',
-    'version': '17.0.1.0.2',
+    'version': '17.0.1.0.3',
     'summary': 'Sale order workflow with custom states and commission reporting',
     'description': '''
         Enhanced Sale Order Workflow Module for Odoo 17

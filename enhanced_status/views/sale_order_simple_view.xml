@@ -5,6 +5,7 @@
         <field name="name">sale.order.form.enhanced.simple</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
 
             <!-- Replace complex state with simple workflow -->
@@ -62,11 +63,15 @@
                 <button name="action_unlock_order" type="object" string="🔓 Unlock" class="btn-warning" invisible="not is_locked or not can_unlock" confirm="Unlock this order for editing?" help="Unlock order (Admin only)"/>
             </xpath>
 
+            <!-- Add sale order type field after partner_id to avoid inheritance conflicts -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sale_order_type_id" readonly="is_locked and not can_unlock" options="{'no_create': True}"/>
+            </xpath>
+
             <!-- Simplify the sale header group - keep it minimal but include important tracking fields -->
             <xpath expr="//group[@name='sale_header']" position="replace">
                 <group name="sale_header">
                     <group name="customer_info">
-                        <field name="sale_order_type_id" readonly="is_locked and not can_unlock" options="{'no_create': True}"/>
                         <field name="partner_id" readonly="is_locked and not can_unlock"/>
                         <field name="opportunity_id" string="CRM Lead ID" readonly="is_locked and not can_unlock"/>
                         <field name="date_order" readonly="is_locked and not can_unlock"/>
