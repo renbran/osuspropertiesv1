@@ -56,20 +56,16 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_account_invoice_filter"/>
         <field name="arch" type="xml">
-            <!-- Add Sale Type filter in the filter section -->
-            <xpath expr="//filter[@name='invoice_type']" position="after">
-                <separator/>
-                <filter name="filter_sale_type"
-                        string="Sale Type"
-                        context="{'group_by': 'sale_order_type_id'}"
-                        help="Group by Sale Order Type"/>
+            <!-- Add Sale Type field for direct searching -->
+            <xpath expr="//field[@name='journal_id']" position="after">
+                <field name="sale_order_type_id" string="Sale Type"/>
             </xpath>
 
-            <!-- Add Sale Type field for direct searching -->
-            <xpath expr="//field[@name='partner_id']" position="after">
-                <field name="sale_order_type_id"
-                       string="Sale Type"
-                       filter_domain="[('sale_order_type_id', 'ilike', self)]"/>
+            <!-- Add Sale Type in Group By section -->
+            <xpath expr="//filter[@name='status']" position="after">
+                <filter name="groupby_sale_type"
+                        string="Sale Order Type"
+                        context="{'group_by': 'sale_order_type_id'}"/>
             </xpath>
 
             <!-- Add Group By option for Sale Type -->
