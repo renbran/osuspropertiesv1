@@ -97,12 +97,7 @@
         </field>
     </record>
 
-    <!--
-    ================================================================
-    Invoice Pivot View - Include Sale Order Type
-    ================================================================
-    Adds sale_order_type_id to pivot view for analytics and reporting.
-    -->
+    <!-- Pivot and Graph views temporarily disabled until view references are verified
     <record id="view_invoice_pivot_inherit_sale_type" model="ir.ui.view">
         <field name="name">account.invoice.pivot.inherit.sale.type</field>
         <field name="model">account.move</field>
@@ -114,12 +109,6 @@
         </field>
     </record>
 
-    <!--
-    ================================================================
-    Invoice Graph View - Include Sale Order Type
-    ================================================================
-    Adds sale_order_type_id to graph view for visual analytics.
-    -->
     <record id="view_invoice_graph_inherit_sale_type" model="ir.ui.view">
         <field name="name">account.invoice.graph.inherit.sale.type</field>
         <field name="model">account.move</field>
@@ -130,5 +119,6 @@
             </xpath>
         </field>
     </record>
+    -->
 
 </odoo>
