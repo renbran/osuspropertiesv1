@@ -19,9 +19,10 @@ class AccountMove(models.Model):
     # Many2one field to link invoice with sale order type
     sale_order_type_id = fields.Many2one(
         comodel_name='sale.order.type',
-        string='Sale Type',
+        string='Sale Order Type',
         help='Sale Order Type from the originating Sale Order. '
              'This field is automatically populated when creating invoices from sale orders.',
+        compute='_compute_sale_order_type_from_lines',  # Auto-compute from sale orders
         store=True,  # Store for filtering and reporting
         readonly=False,  # Allow manual changes if needed
         copy=True,  # Copy to credit notes and duplicated invoices
