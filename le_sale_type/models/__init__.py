@@ -1,1 +1,1 @@
-from . import sale_order, sale_order_type
+from . import sale_order, sale_order_type, account_move

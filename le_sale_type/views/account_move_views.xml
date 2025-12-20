@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+    ================================================================
+    Invoice Form View - Add Sale Order Type Field
+    ================================================================
+    Adds sale_order_type_id field to customer invoice form view.
+    Field is placed in the header area for high visibility.
+    -->
+    <record id="view_move_form_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <!-- Add Sale Type field in the header, before customer/partner field -->
+            <xpath expr="//field[@name='partner_id']" position="before">
+                <field name="sale_order_type_id"
+                       options="{'no_create': True, 'no_open': True}"
+                       domain="[('active','=',True)]"
+                       invisible="move_type not in ('out_invoice', 'out_refund')"
+                       placeholder="Auto-filled from Sale Order"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+    ================================================================
+    Invoice Tree View - Add Sale Order Type Column
+    ================================================================
+    Adds sale_order_type_id column to invoice tree/list view.
+    Optional column that can be shown/hidden by users.
+    -->
+    <record id="view_invoice_tree_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.move.tree.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <!-- Add Sale Type column after partner_id -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sale_order_type_id"
+                       optional="show"
+                       string="Sale Type"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+    ================================================================
+    Invoice Search View - Add Sale Order Type Filter & Group By
+    ================================================================
+    Enhances invoice search with sale order type filtering and grouping.
+    Enables reporting and analysis by sale type.
+    -->
+    <record id="view_account_invoice_filter_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.invoice.select.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+        <field name="arch" type="xml">
+            <!-- Add Sale Type filter in the filter section -->
+            <xpath expr="//filter[@name='invoice_type']" position="after">
+                <separator/>
+                <filter name="filter_sale_type"
+                        string="Sale Type"
+                        context="{'group_by': 'sale_order_type_id'}"
+                        help="Group by Sale Order Type"/>
+            </xpath>
+
+            <!-- Add Sale Type field for direct searching -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sale_order_type_id"
+                       string="Sale Type"
+                       filter_domain="[('sale_order_type_id', 'ilike', self)]"/>
+            </xpath>
+
+            <!-- Add Group By option for Sale Type -->
+            <xpath expr="//filter[@name='salesperson']" position="after">
+                <filter name="group_by_sale_type"
+                        string="Sale Type"
+                        context="{'group_by': 'sale_order_type_id'}"
+                        help="Group by Sale Order Type"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+    ================================================================
+    Supplier Invoice Form View - Hide Sale Type (Not Applicable)
+    ================================================================
+    Sale Order Type is only relevant for customer invoices, not bills.
+    This ensures the field doesn't show on supplier invoices.
+    -->
+    <record id="view_move_supplier_form_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.move.supplier.form.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='sale_order_type_id']" position="attributes">
+                <!-- Sale Type should only be visible on customer invoices and credit notes -->
+                <attribute name="invisible">move_type not in ('out_invoice', 'out_refund')</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+    ================================================================
+    Invoice Pivot View - Include Sale Order Type
+    ================================================================
+    Adds sale_order_type_id to pivot view for analytics and reporting.
+    -->
+    <record id="view_invoice_pivot_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.invoice.pivot.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_pivot"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sale_order_type_id" type="row"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+    ================================================================
+    Invoice Graph View - Include Sale Order Type
+    ================================================================
+    Adds sale_order_type_id to graph view for visual analytics.
+    -->
+    <record id="view_invoice_graph_inherit_sale_type" model="ir.ui.view">
+        <field name="name">account.invoice.graph.inherit.sale.type</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_graph"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sale_order_type_id"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
