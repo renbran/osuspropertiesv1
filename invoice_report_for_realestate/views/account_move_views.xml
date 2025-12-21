@@ -79,7 +79,24 @@
             </xpath>
             <xpath expr="//field[@name='amount_total_signed']" position="before">
                 <field name="sale_value" optional="show"/>
-                <field name="qty" string="Qty" optional="show"/>
+                <field name="developer_commission" string="Developer %" optional="show" widget="percentage"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_invoice_tree_inherit_osus_property_columns" model="ir.ui.view">
+        <field name="name">account.move.tree.customer.invoice.osus.property.columns</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="sale_order_type_id" optional="show"/>
+                <field name="project_id" optional="show"/>
+                <field name="unit_id" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='amount_total_signed']" position="before">
+                <field name="sale_value" optional="show"/>
+                <field name="developer_commission" string="Developer %" optional="show" widget="percentage"/>
             </xpath>
         </field>
     </record>

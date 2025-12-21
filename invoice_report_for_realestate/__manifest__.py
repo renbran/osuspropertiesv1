@@ -1,6 +1,6 @@
 {
     'name': 'OSUS Invoice Report - Enhanced with Smart Payment Vouchers',
-    'version': '17.0.3.3.0',
+    'version': '17.0.3.3.1',
     'summary': 'Professional UAE Tax Invoice Reports with Intelligent Payment Vouchers',
     'description': '''
         Professional Tax Invoice Reports with Advanced Features - Now Default for Accounting
