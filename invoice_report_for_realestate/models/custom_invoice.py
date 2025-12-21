@@ -35,75 +35,6 @@ class AccountMove(models.Model):
     # Note: Customer receipts are handled by account.payment module (payment vouchers), 
     # not account.move. See account_payment.py for customer receipt functionality.
 
-    @api.model
-    def action_bulk_print_invoices(self):
-        """
-        Print multiple invoices in bulk as a single PDF file.
-        Called from list view action.
-        """
-        active_ids = self.env.context.get('active_ids', [])
-        if not active_ids:
-            raise UserError(_("Please select at least one invoice to print."))
-        
-        invoices = self.browse(active_ids)
-        
-        # Filter only customer invoices
-        customer_invoices = invoices.filtered(lambda inv: inv.move_type == 'out_invoice')
-        if not customer_invoices:
-            raise UserError(_("Please select at least one customer invoice."))
-        
-        try:
-            return self.env.ref('invoice_report_for_realestate.action_report_osus_invoice_bulk').report_action(customer_invoices)
-        except ValueError as e:
-            _logger.warning("Custom bulk invoice report not found: %s. Using standard report as fallback.", str(e))
-            return self.env.ref('account.account_invoices').report_action(customer_invoices)
-
-    @api.model
-    def action_bulk_print_bills(self):
-        """
-        Print multiple bills in bulk as a single PDF file.
-        Called from list view action.
-        """
-        active_ids = self.env.context.get('active_ids', [])
-        if not active_ids:
-            raise UserError(_("Please select at least one bill to print."))
-        
-        bills = self.browse(active_ids)
-        
-        # Filter only vendor bills
-        vendor_bills = bills.filtered(lambda bill: bill.move_type == 'in_invoice')
-        if not vendor_bills:
-            raise UserError(_("Please select at least one vendor bill."))
-        
-        try:
-            return self.env.ref('invoice_report_for_realestate.action_report_osus_bill_bulk').report_action(vendor_bills)
-        except ValueError as e:
-            _logger.warning("Custom bulk bill report not found: %s. Using standard report as fallback.", str(e))
-            return self.env.ref('account.account_invoices').report_action(vendor_bills)
-
-    @api.model
-    def action_bulk_print_mixed(self):
-        """
-        Print multiple documents (invoices, bills, credit notes) in bulk as a single PDF file.
-        Called from list view action.
-        """
-        active_ids = self.env.context.get('active_ids', [])
-        if not active_ids:
-            raise UserError(_("Please select at least one document to print."))
-        
-        documents = self.browse(active_ids)
-        
-        # Filter only posted documents
-        posted_documents = documents.filtered(lambda doc: doc.state == 'posted')
-        if not posted_documents:
-            raise UserError(_("Please select at least one posted document."))
-        
-        try:
-            return self.env.ref('invoice_report_for_realestate.action_report_osus_mixed_bulk').report_action(posted_documents)
-        except ValueError as e:
-            _logger.warning("Custom bulk mixed report not found: %s. Using standard report as fallback.", str(e))
-            return self.env.ref('account.account_invoices').report_action(posted_documents)
-
     # Deal Information Fields
     booking_date = fields.Date(string='Booking Date', help="Date when the property booking was confirmed")
 
@@ -170,6 +101,14 @@ class AccountMove(models.Model):
         tracking=True,
         help="The type/category of the property (e.g., Villa, Apartment, Commercial)"
     )
+    sale_order_type_id = fields.Many2one(
+        'sale.order.type',
+        string='Sale Order Type',
+        compute='_compute_sale_order_type',
+        store=True,
+        readonly=True,
+        help="Sale order type from the originating sale order"
+    )
 
     # Computed fields for enhanced tree view
     is_property_deal = fields.Boolean(
@@ -184,6 +123,13 @@ class AccountMove(models.Model):
         store=True,
         currency_field='currency_id',
         help="Calculated commission amount based on sale value and percentage"
+    )
+
+    # Non-stored computed field for total invoice line quantity
+    qty = fields.Float(
+        string='Qty',
+        compute='_compute_qty',
+        help="Sum of quantities from invoice lines"
     )
 
     @api.depends('name', 'partner_id', 'amount_total', 'invoice_date', 'qr_in_report', 'buyer_id', 'project_id', 'unit_id')
@@ -373,6 +319,15 @@ class AccountMove(models.Model):
                     if invoice_field in vals:
                         _logger.debug(f"Field {invoice_field} already set in vals")
 
+    @api.depends('invoice_origin')
+    def _compute_sale_order_type(self):
+        SaleOrder = self.env['sale.order']
+        for record in self:
+            record.sale_order_type_id = False
+            if record.invoice_origin:
+                sale_order = SaleOrder.search([('name', '=', record.invoice_origin)], limit=1)
+                record.sale_order_type_id = sale_order.sale_type_id if sale_order else False
+
     @api.depends('buyer_id', 'project_id', 'unit_id', 'deal_id', 'booking_date')
     def _compute_deal_status(self):
         """Compute if this is a property deal based on available deal information"""
@@ -390,3 +345,8 @@ class AccountMove(models.Model):
                 record.commission_amount = (record.sale_value * record.developer_commission) / 100
             else:
                 record.commission_amount = 0.0
+
+    @api.depends('invoice_line_ids.quantity')
+    def _compute_qty(self):
+        for record in self:
+            record.qty = sum(record.invoice_line_ids.mapped('quantity'))
