@@ -296,6 +296,18 @@ class AccountMove(models.Model):
         return (self.env.user.has_group('account.group_account_manager') or
                 self.env.user.has_group('payment_account_enhanced.group_payment_manager'))
 
+    def button_draft(self):
+        """Disallow resetting posted entries unless Payment Manager/System Admin"""
+        for move in self:
+            if move.state == 'posted':
+                allowed = self.env.user.has_group('payment_account_enhanced.group_payment_manager') or \
+                          self.env.user.has_group('account.group_system')
+                if not allowed:
+                    raise UserError(_(
+                        "Posted journal entries cannot be reset to Draft. Create a reversal instead or contact a Payment Manager."
+                    ))
+        return super(AccountMove, self).button_draft()
+
     def _post_approval_message(self, action):
         """Post message to chatter about approval action"""
         if self.env.context.get('skip_approval_message'):
@@ -318,3 +330,45 @@ class AccountMove(models.Model):
             'approver_id': False,
             'approver_date': False,
         })
+
+    # Computed field for display name
+    partner_display_name = fields.Char(
+        string='Partner Name',
+        compute='_compute_partner_display_name',
+        store=False,
+        help="Clean partner name without archive indicator"
+    )
+
+    @api.depends('partner_id', 'partner_id.name', 'partner_id.active')
+    def _compute_partner_display_name(self):
+        """Compute clean partner name without [Archived] prefix"""
+        for record in self:
+            if record.partner_id:
+                # Get the actual partner name without archive prefix
+                record.partner_display_name = record.partner_id.with_context(active_test=False).name
+            else:
+                record.partner_display_name = False
+
+    def name_get(self):
+        """
+        Override name_get to properly display invoice name with partner info
+        even when partner is archived, matching the form view display.
+        """
+        result = []
+        for record in self:
+            # Get the base name from parent class
+            name = record.name or ''
+            
+            # Add partner name with proper formatting
+            if record.partner_id:
+                # Get actual partner name, bypassing archive indicator
+                partner = record.partner_id.with_context(active_test=False)
+                partner_name = partner.name or ''
+                # Construct display: Invoice# (Partner Name)
+                display_name = f"{name} ({partner_name})" if name else partner_name
+            else:
+                display_name = name
+            
+            result.append((record.id, display_name))
+        
+        return result

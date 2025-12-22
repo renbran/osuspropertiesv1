@@ -16,4 +16,15 @@ class AccountJournal(models.Model):
         help="Require approval workflow for payments in this journal"
     )
 
-
+    def name_get(self):
+        """
+        Override name_get to properly display journal name
+        consistent across all views, avoiding archive indicators.
+        """
+        result = []
+        for record in self:
+            # Display journal name directly without archive prefix
+            name = record.name or ''
+            result.append((record.id, name))
+        
+        return result

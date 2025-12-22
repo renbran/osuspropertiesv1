@@ -28,6 +28,22 @@ class AccountPayment(models.Model):
         """Enable workflow validation after successful initialization"""
         self._disable_workflow_validation = False
 
+    def _is_payment_reconciled(self):
+        """Check if payment move is linked to bank reconciliation
+        
+        Returns:
+            bool: True if payment is matched in bank reconciliation
+        """
+        for payment in self:
+            if payment.move_id:
+                # Check if move is referenced in bank reconciliation
+                reconciliation = self.env['account.bank.reconciliation.line'].search([
+                    ('move_id', '=', payment.move_id.id)
+                ], limit=1)
+                if reconciliation:
+                    return True
+        return False
+
     # ============================================================================
     # ESSENTIAL WORKFLOW FIELDS
     # ============================================================================
@@ -591,38 +607,58 @@ class AccountPayment(models.Model):
         return payment
 
     def write(self, vals):
-        """Override write to prevent unauthorized workflow state changes"""
-        
-        # Check if approval_state is being changed
+        """Enforce workflow rules + lock posted payments from edits + protect reconciled payments"""
+
+        # Check reconciliation safety - prevent breaking matched payments
+        for payment in self:
+            if payment._is_payment_reconciled():
+                # Payment is matched in bank reconciliation - very restricted
+                # Only allow state/approval_state writes for workflow progression
+                restricted_fields = set(vals.keys()) - {'state', 'approval_state', 'reviewer_id', 'approver_id', 
+                                                         'authorizer_id', 'reviewer_date', 'approver_date', 
+                                                         'authorizer_date', 'remarks'}
+                if restricted_fields:
+                    raise ValidationError(_(
+                        "Cannot modify reconciled payment details. Payment is matched in bank reconciliation.\n"
+                        "Restricted fields: %s\n\n"
+                        "To modify, please:\n"
+                        "1. Unreconcile in bank reconciliation (Finance → Bank Reconciliation)\n"
+                        "2. Then modify this payment\n"
+                        "3. Reconcile again"
+                    ) % ', '.join(sorted(restricted_fields))
+                    )
+
+        # Hard guard: block edits on posted payments unless Payment Manager/System Admin
+        if any(rec.state == 'posted' for rec in self):
+            allowed = self.env.user.has_group('payment_account_enhanced.group_payment_manager') or \
+                      self.env.user.has_group('account.group_system')
+            if not allowed:
+                raise ValidationError(_(
+                    "Posted payments cannot be modified. Please create a reversal or contact a Payment Manager."
+                ))
+
+        # Workflow transition validation
         if 'approval_state' in vals:
             new_state = vals['approval_state']
-            
+
             for record in self:
                 # Allow managers to bypass some restrictions
                 if not self.env.user.has_group('payment_account_enhanced.group_payment_manager'):
-                    # Validate workflow transition
                     record._validate_workflow_transition(new_state)
-                
-                # Special checks for certain states
+
                 if new_state == 'approved':
-                    # Ensure all required stages are completed for high-value payments
                     if record.requires_authorization and not record.authorizer_id and 'authorizer_id' not in vals:
                         raise UserError(_("High-value payment cannot be marked as approved without authorization."))
-                
                 elif new_state == 'posted':
-                    # Prevent direct posting without workflow
                     if not record.reviewer_id and 'reviewer_id' not in vals:
                         raise UserError(_("Payment cannot be posted without review stage completion."))
                     if not record.approver_id and 'approver_id' not in vals:
                         raise UserError(_("Payment cannot be posted without approval stage completion."))
-        
-        # Check if critical workflow fields are being modified inappropriately
+
+        # Prevent direct edits to workflow assignment fields unless via actions or manager
         workflow_fields = ['reviewer_id', 'approver_id', 'authorizer_id', 'reviewer_date', 'approver_date', 'authorizer_date']
-        
         if any(field in vals for field in workflow_fields):
-            # Only allow modification through proper workflow methods or by managers
             if not self.env.context.get('skip_workflow_validation') and not self.env.user.has_group('payment_account_enhanced.group_payment_manager'):
-                # Check if this is being called from a workflow action method
                 import inspect
                 frame = inspect.currentframe()
                 calling_method = None
@@ -636,12 +672,40 @@ class AccountPayment(models.Model):
                             break
                 finally:
                     del frame
-                
+
                 if not calling_method:
-                    raise UserError(_("Workflow fields cannot be modified directly. Use the appropriate workflow action buttons."))
-        
-        return super(AccountPayment, self).write(vals)
-    
+                    raise UserError(_(
+                        "Workflow fields cannot be modified directly. Use the appropriate workflow action buttons."
+                    ))
+
+        # Standard write then optional QR generation
+        result = super(AccountPayment, self).write(vals)
+
+        state_changed = vals.get('state') or vals.get('approval_state')
+        for record in self:
+            # Generate access token if missing
+            if not record.access_token:
+                try:
+                    token = record._generate_access_token()
+                    super(AccountPayment, record).write({'access_token': token})
+                    _logger.info("✓ Generated access token for payment %s", record.voucher_number or record.name)
+                except Exception as e:
+                    _logger.warning("Could not generate access token for payment %s: %s", record.voucher_number or record.name, str(e))
+
+            # Auto-generate QR code when payment reaches approved or posted state
+            if state_changed and not record.qr_code:
+                if record.approval_state in ['approved', 'posted'] or record.state == 'posted':
+                    try:
+                        record.generate_qr_code()
+                        _logger.info("✓ Auto-generated QR code for payment %s (state: %s)",
+                                   record.voucher_number or record.name,
+                                   record.approval_state or record.state)
+                    except Exception as e:
+                        _logger.warning("Could not auto-generate QR code for payment %s: %s",
+                                      record.voucher_number or record.name, str(e))
+
+        return result
+
     def _generate_unique_voucher_number(self, sequence_code):
         """Generate unique voucher number with collision checking"""
         max_attempts = 50
@@ -669,36 +733,6 @@ class AccountPayment(models.Model):
                      max_attempts, fallback_voucher)
         return fallback_voucher
 
-    def write(self, vals):
-        """Enhanced write method - Auto-generate QR when payment is approved/posted"""
-        result = super(AccountPayment, self).write(vals)
-        
-        # Check if we should auto-generate QR code
-        state_changed = vals.get('state') or vals.get('approval_state')
-        
-        for record in self:
-            # Generate access token if missing
-            if not record.access_token:
-                try:
-                    token = record._generate_access_token()
-                    super(AccountPayment, record).write({'access_token': token})
-                    _logger.info("✓ Generated access token for payment %s", record.voucher_number or record.name)
-                except Exception as e:
-                    _logger.warning("Could not generate access token for payment %s: %s", record.voucher_number or record.name, str(e))
-            
-            # Auto-generate QR code when payment reaches approved or posted state
-            if state_changed and not record.qr_code:
-                if record.approval_state in ['approved', 'posted'] or record.state == 'posted':
-                    try:
-                        record.generate_qr_code()
-                        _logger.info("✓ Auto-generated QR code for payment %s (state: %s)", 
-                                   record.voucher_number or record.name, 
-                                   record.approval_state or record.state)
-                    except Exception as e:
-                        _logger.warning("Could not auto-generate QR code for payment %s: %s", 
-                                      record.voucher_number or record.name, str(e))
-        
-        return result
 
     def _generate_access_token(self):
         """Generate secure access token for QR code validation with collision checking"""
@@ -1225,6 +1259,18 @@ class AccountPayment(models.Model):
             
             # Send email notification
             record._send_workflow_email('payment_account_enhanced.mail_template_payment_rejected')
+
+    def action_draft(self):
+        """Block resetting posted vouchers to draft unless Payment Manager/System Admin"""
+        for payment in self:
+            if payment.state == 'posted':
+                allowed = self.env.user.has_group('payment_account_enhanced.group_payment_manager') or \
+                          self.env.user.has_group('account.group_system')
+                if not allowed:
+                    raise ValidationError(_(
+                        "Posted payments cannot be reset to Draft. Please create a reversal or contact a Payment Manager."
+                    ))
+        return super(AccountPayment, self).action_draft()
 
     def action_post(self):
         """Override action_post to enforce complete workflow validation (Stage 4)"""

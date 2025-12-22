@@ -50,13 +50,6 @@
                     <attribute name="js_class">osus_bulk_print_list</attribute>
                 </xpath>
 
-                <!-- Declare required fields -->
-                <xpath expr="//field[@name='name']" position="before">
-                    <field name="move_type" column_invisible="1"/>
-                    <field name="company_currency_id" column_invisible="1"/>
-                    <field name="made_sequence_hole" column_invisible="1"/>
-                </xpath>
-
             </field>
         </record>
 
